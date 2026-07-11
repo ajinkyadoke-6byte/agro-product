@@ -120,7 +120,7 @@
 
 
 import { Home, WifiOff, Wrench, AlertTriangle, RefreshCw } from "lucide-react";
-import "../App.css";
+import "../index.css";
 
 // ---------------------------------------------------------------------------
 // One component, four situations. Instead of building a separate page for

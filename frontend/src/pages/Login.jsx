@@ -1,8 +1,11 @@
 import React, { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import logo from '../assets/AgroMartlogo.jpeg'
 import farmerImg from '../assets/farmerImg.jpeg'
+import { User, Lock, Eye, EyeOff, Package, Heart, ShieldCheck } from 'lucide-react'
 
-const Login = ({ onLoginSuccess, onRegister }) => {
+const Login = () => {
+  const navigate = useNavigate()
   const [form, setForm] = useState({ credential: '', password: '', remember: false })
   const [errors, setErrors] = useState({})
   const [showPassword, setShowPassword] = useState(false)
@@ -29,10 +32,9 @@ const Login = ({ onLoginSuccess, onRegister }) => {
       return
     }
     setLoading(true)
-    // Simulate login — replace with real auth
     setTimeout(() => {
       setLoading(false)
-      onLoginSuccess()
+      navigate('/profile')
     }, 1000)
   }
 
@@ -42,8 +44,6 @@ const Login = ({ onLoginSuccess, onRegister }) => {
 
   return (
     <div className="login-page">
-
-      {/* Left Panel */}
       <div className="login-left" style={{ backgroundImage: `url(${farmerImg})` }}>
         <div className="login-left-overlay">
           <div className="login-left-content">
@@ -51,21 +51,21 @@ const Login = ({ onLoginSuccess, onRegister }) => {
             <p className="login-welcome-sub">Login to continue your journey with AgroMart.</p>
             <div className="login-features">
               <div className="login-feature-item">
-                <div className="login-feature-icon"><i className="ti ti-package"></i></div>
+                <div className="login-feature-icon"><Package size={18} /></div>
                 <div>
                   <p className="login-feature-title">Easy Order Tracking</p>
                   <p className="login-feature-subtitle">Track your orders in real-time</p>
                 </div>
               </div>
               <div className="login-feature-item">
-                <div className="login-feature-icon"><i className="ti ti-heart"></i></div>
+                <div className="login-feature-icon"><Heart size={18} /></div>
                 <div>
                   <p className="login-feature-title">Save Your Favorites</p>
                   <p className="login-feature-subtitle">Bookmark your favorite products</p>
                 </div>
               </div>
               <div className="login-feature-item">
-                <div className="login-feature-icon"><i className="ti ti-shield-check"></i></div>
+                <div className="login-feature-icon"><ShieldCheck size={18} /></div>
                 <div>
                   <p className="login-feature-title">Secure &amp; Safe</p>
                   <p className="login-feature-subtitle">Your data is always protected</p>
@@ -76,10 +76,8 @@ const Login = ({ onLoginSuccess, onRegister }) => {
         </div>
       </div>
 
-      {/* Right Panel */}
       <div className="login-right">
         <div className="login-form-wrap">
-
           <div className="login-logo">
             <img src={logo} alt="AgroMart" />
             <div>
@@ -94,7 +92,7 @@ const Login = ({ onLoginSuccess, onRegister }) => {
           <div className="login-field">
             <label>Mobile Number / Email</label>
             <div className={`login-input-wrap ${errors.credential ? 'input-error' : ''}`}>
-              <i className="ti ti-user"></i>
+              <User size={17} />
               <input
                 type="text"
                 name="credential"
@@ -113,7 +111,7 @@ const Login = ({ onLoginSuccess, onRegister }) => {
               <span className="forgot-password-link">Forgot Password?</span>
             </div>
             <div className={`login-input-wrap ${errors.password ? 'input-error' : ''}`}>
-              <i className="ti ti-lock"></i>
+              <Lock size={17} />
               <input
                 type={showPassword ? 'text' : 'password'}
                 name="password"
@@ -122,10 +120,9 @@ const Login = ({ onLoginSuccess, onRegister }) => {
                 onChange={handleChange}
                 onKeyDown={handleKeyDown}
               />
-              <i
-                className={`ti ${showPassword ? 'ti-eye-off' : 'ti-eye'} login-eye-icon`}
-                onClick={() => setShowPassword(!showPassword)}
-              ></i>
+              <span className="login-eye-icon" onClick={() => setShowPassword(!showPassword)}>
+                {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
+              </span>
             </div>
             {errors.password && <span className="error-msg">{errors.password}</span>}
           </div>
@@ -156,16 +153,10 @@ const Login = ({ onLoginSuccess, onRegister }) => {
             Continue with Google
           </button>
 
-          <button className="login-social-btn login-facebook-btn">
-            <i className="ti ti-brand-facebook" style={{ color: '#1877F2', fontSize: 20 }}></i>
-            Continue with Facebook
-          </button>
-
           <p className="login-register-text">
             Don't have an account?{' '}
-            <span className="login-register-link" onClick={onRegister}>Register Now</span>
+            <span className="login-register-link" onClick={() => navigate('/register')}>Register Now</span>
           </p>
-
         </div>
       </div>
     </div>

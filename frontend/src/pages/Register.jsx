@@ -1,8 +1,11 @@
 import React, { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import logo from '../assets/AgroMartlogo.jpeg'
 import plantImg from '../assets/plantImg.jpeg'
+import { User, Phone, Mail, Lock, Calendar, Users, Eye, EyeOff, Tag, Package, Heart, ShieldCheck } from 'lucide-react'
 
-const Register = ({ onRegisterSuccess, onLogin }) => {
+const Register = () => {
+  const navigate = useNavigate()
   const [form, setForm] = useState({
     fullName: '', mobile: '', email: '',
     password: '', confirmPassword: '',
@@ -42,10 +45,9 @@ const Register = ({ onRegisterSuccess, onLogin }) => {
       return
     }
     setLoading(true)
-    // Simulate registration — replace with real auth
     setTimeout(() => {
       setLoading(false)
-      onRegisterSuccess()
+      navigate('/profile')
     }, 1000)
   }
 
@@ -55,8 +57,6 @@ const Register = ({ onRegisterSuccess, onLogin }) => {
 
   return (
     <div className="login-page">
-
-      {/* Left Panel */}
       <div className="login-left" style={{ backgroundImage: `url(${plantImg})` }}>
         <div className="login-left-overlay">
           <div className="login-left-content">
@@ -64,28 +64,28 @@ const Register = ({ onRegisterSuccess, onLogin }) => {
             <p className="login-welcome-sub">Join AgroMart today and experience the best in agricultural shopping.</p>
             <div className="login-features">
               <div className="login-feature-item">
-                <div className="login-feature-icon"><i className="ti ti-discount-2"></i></div>
+                <div className="login-feature-icon"><Tag size={18} /></div>
                 <div>
                   <p className="login-feature-title">Exclusive Offers</p>
                   <p className="login-feature-subtitle">Get access to special discounts and offers.</p>
                 </div>
               </div>
               <div className="login-feature-item">
-                <div className="login-feature-icon"><i className="ti ti-package"></i></div>
+                <div className="login-feature-icon"><Package size={18} /></div>
                 <div>
                   <p className="login-feature-title">Track Orders</p>
                   <p className="login-feature-subtitle">Track your orders in real-time with ease.</p>
                 </div>
               </div>
               <div className="login-feature-item">
-                <div className="login-feature-icon"><i className="ti ti-heart"></i></div>
+                <div className="login-feature-icon"><Heart size={18} /></div>
                 <div>
                   <p className="login-feature-title">Save Favorites</p>
                   <p className="login-feature-subtitle">Bookmark your favorite products and buy later.</p>
                 </div>
               </div>
               <div className="login-feature-item">
-                <div className="login-feature-icon"><i className="ti ti-shield-check"></i></div>
+                <div className="login-feature-icon"><ShieldCheck size={18} /></div>
                 <div>
                   <p className="login-feature-title">Secure &amp; Safe</p>
                   <p className="login-feature-subtitle">Your data is always protected with us.</p>
@@ -96,10 +96,8 @@ const Register = ({ onRegisterSuccess, onLogin }) => {
         </div>
       </div>
 
-      {/* Right Panel */}
       <div className="login-right">
-        <div className="login-form-wrap">
-
+        <div className="login-form-wrap register-form-wrap">
           <div className="login-logo">
             <img src={logo} alt="AgroMart" />
             <div>
@@ -114,7 +112,7 @@ const Register = ({ onRegisterSuccess, onLogin }) => {
           <div className="login-field">
             <label>Full Name</label>
             <div className={`login-input-wrap ${errors.fullName ? 'input-error' : ''}`}>
-              <i className="ti ti-user"></i>
+              <User size={17} />
               <input
                 type="text"
                 name="fullName"
@@ -131,7 +129,7 @@ const Register = ({ onRegisterSuccess, onLogin }) => {
             <div className="login-field">
               <label>Mobile Number</label>
               <div className={`login-input-wrap ${errors.mobile ? 'input-error' : ''}`}>
-                <i className="ti ti-phone"></i>
+                <Phone size={17} />
                 <input
                   type="tel"
                   name="mobile"
@@ -147,7 +145,7 @@ const Register = ({ onRegisterSuccess, onLogin }) => {
             <div className="login-field">
               <label>Email Address</label>
               <div className={`login-input-wrap ${errors.email ? 'input-error' : ''}`}>
-                <i className="ti ti-mail"></i>
+                <Mail size={17} />
                 <input
                   type="email"
                   name="email"
@@ -165,7 +163,7 @@ const Register = ({ onRegisterSuccess, onLogin }) => {
             <div className="login-field">
               <label>Password</label>
               <div className={`login-input-wrap ${errors.password ? 'input-error' : ''}`}>
-                <i className="ti ti-lock"></i>
+                <Lock size={17} />
                 <input
                   type={showPassword ? 'text' : 'password'}
                   name="password"
@@ -174,10 +172,9 @@ const Register = ({ onRegisterSuccess, onLogin }) => {
                   onChange={handleChange}
                   onKeyDown={handleKeyDown}
                 />
-                <i
-                  className={`ti ${showPassword ? 'ti-eye-off' : 'ti-eye'} login-eye-icon`}
-                  onClick={() => setShowPassword(!showPassword)}
-                ></i>
+                <span className="login-eye-icon" onClick={() => setShowPassword(!showPassword)}>
+                  {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
+                </span>
               </div>
               {errors.password && <span className="error-msg">{errors.password}</span>}
             </div>
@@ -185,7 +182,7 @@ const Register = ({ onRegisterSuccess, onLogin }) => {
             <div className="login-field">
               <label>Confirm Password</label>
               <div className={`login-input-wrap ${errors.confirmPassword ? 'input-error' : ''}`}>
-                <i className="ti ti-lock"></i>
+                <Lock size={17} />
                 <input
                   type={showConfirmPassword ? 'text' : 'password'}
                   name="confirmPassword"
@@ -194,10 +191,9 @@ const Register = ({ onRegisterSuccess, onLogin }) => {
                   onChange={handleChange}
                   onKeyDown={handleKeyDown}
                 />
-                <i
-                  className={`ti ${showConfirmPassword ? 'ti-eye-off' : 'ti-eye'} login-eye-icon`}
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                ></i>
+                <span className="login-eye-icon" onClick={() => setShowConfirmPassword(!showConfirmPassword)}>
+                  {showConfirmPassword ? <EyeOff size={17} /> : <Eye size={17} />}
+                </span>
               </div>
               {errors.confirmPassword && <span className="error-msg">{errors.confirmPassword}</span>}
             </div>
@@ -207,7 +203,7 @@ const Register = ({ onRegisterSuccess, onLogin }) => {
             <div className="login-field">
               <label>Date of Birth</label>
               <div className={`login-input-wrap ${errors.dob ? 'input-error' : ''}`}>
-                <i className="ti ti-calendar"></i>
+                <Calendar size={17} />
                 <input
                   type="date"
                   name="dob"
@@ -222,7 +218,7 @@ const Register = ({ onRegisterSuccess, onLogin }) => {
             <div className="login-field">
               <label>Gender</label>
               <div className={`login-input-wrap ${errors.gender ? 'input-error' : ''}`}>
-                <i className="ti ti-users"></i>
+                <Users size={17} />
                 <select name="gender" value={form.gender} onChange={handleChange}>
                   <option value="">Select Gender</option>
                   <option value="male">Male</option>
@@ -250,30 +246,10 @@ const Register = ({ onRegisterSuccess, onLogin }) => {
             {loading ? 'Creating Account...' : 'Create Account'}
           </button>
 
-          <div className="login-divider"><span>or register with</span></div>
-
-          <div className="register-social-row">
-            <button className="login-social-btn">
-              <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/>
-                <path d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" fill="#34A853"/>
-                <path d="M3.964 10.706A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.706V4.962H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.038l3.007-2.332z" fill="#FBBC05"/>
-                <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.962L3.964 7.294C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
-              </svg>
-              Continue with Google
-            </button>
-
-            <button className="login-social-btn login-facebook-btn">
-              <i className="ti ti-brand-facebook" style={{ color: '#1877F2', fontSize: 20 }}></i>
-              Continue with Facebook
-            </button>
-          </div>
-
           <p className="login-register-text">
             Already have an account?{' '}
-            <span className="login-register-link" onClick={onLogin}>Login Now</span>
+            <span className="login-register-link" onClick={() => navigate('/login')}>Login Now</span>
           </p>
-
         </div>
       </div>
     </div>
