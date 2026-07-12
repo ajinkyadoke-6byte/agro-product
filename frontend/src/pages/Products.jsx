@@ -6,20 +6,12 @@ import {
   Truck, Lock, Headset, ArrowLeft, ArrowRight
 } from 'lucide-react'
 
-const categories = [
-  { name: 'Fertilizers', count: 4 },
-  { name: 'Pesticides', count: 5 },
-  { name: 'Fungicides', count: 5 },
-  { name: 'Micronutrients', count: 2 },
-  { name: 'Plant Growth Promoters', count: 8 },
-  { name: 'Organic Products', count: 2 },
+const categoryList = [
+  'Fertilizers', 'Pesticides', 'Fungicides',
+  'Micronutrients', 'Plant Growth Promoters', 'Organic Products'
 ]
 
-const ratingFilters = [
-  { stars: 4, label: '& above', count: 32 },
-  { stars: 3, label: '& above', count: 60 },
-  { stars: 2, label: '& above', count: 89 },
-]
+const ratingThresholds = [4, 3, 2]
 
 const renderStars = (rating) => {
   const stars = []
@@ -38,15 +30,44 @@ const Products = ({ onAddToCart }) => {
 
   const categoryFromUrl = searchParams.get('category') || 'All Categories'
   const [selectedCategory, setSelectedCategory] = useState(categoryFromUrl)
-  const [priceRange, setPriceRange] = useState(5000)
+
+  // Highest price among all products — used as the slider's starting point
+  const maxPrice = useMemo(() => {
+    if (!products.length) return 5000
+    return Math.max(...products.map((p) => p.price))
+  }, [products])
+
+  const [priceRange, setPriceRange] = useState(maxPrice)
   const [selectedRating, setSelectedRating] = useState(null)
   const [sortBy, setSortBy] = useState('Popularity')
   const [currentPage, setCurrentPage] = useState(1)
 
-  // Keep internal state in sync if the URL changes (e.g. back button, footer link)
+  // Once products load, snap the slider to the real max price
+  useEffect(() => {
+    setPriceRange(maxPrice)
+  }, [maxPrice])
+
   useEffect(() => {
     setSelectedCategory(categoryFromUrl)
   }, [categoryFromUrl])
+
+  // Real category counts computed from actual product data
+  const categoryCounts = useMemo(() => {
+    const counts = {}
+    categoryList.forEach((name) => {
+      counts[name] = products.filter((p) => p.category === name).length
+    })
+    return counts
+  }, [products])
+
+  // Real rating filter counts computed from actual product data
+  const ratingCounts = useMemo(() => {
+    const counts = {}
+    ratingThresholds.forEach((stars) => {
+      counts[stars] = products.filter((p) => p.rating >= stars).length
+    })
+    return counts
+  }, [products])
 
   const chooseCategory = (name) => {
     setSelectedCategory(name)
@@ -59,7 +80,7 @@ const Products = ({ onAddToCart }) => {
 
   const resetFilters = () => {
     chooseCategory('All Categories')
-    setPriceRange(5000)
+    setPriceRange(maxPrice)
     setSelectedRating(null)
   }
 
@@ -103,10 +124,10 @@ const Products = ({ onAddToCart }) => {
               <input type="checkbox" checked={selectedCategory === 'All Categories'} onChange={() => chooseCategory('All Categories')} />
               All Categories
             </label>
-            {categories.map((cat) => (
-              <label className="filter-checkbox" key={cat.name}>
-                <input type="checkbox" checked={selectedCategory === cat.name} onChange={() => chooseCategory(cat.name)} />
-                {cat.name} <span className="filter-count">({cat.count})</span>
+            {categoryList.map((name) => (
+              <label className="filter-checkbox" key={name}>
+                <input type="checkbox" checked={selectedCategory === name} onChange={() => chooseCategory(name)} />
+                {name} <span className="filter-count">({categoryCounts[name] || 0})</span>
               </label>
             ))}
           </div>
@@ -117,18 +138,29 @@ const Products = ({ onAddToCart }) => {
               <span>₹0</span>
               <span>₹{priceRange}</span>
             </div>
-            <input type="range" min="0" max="5000" value={priceRange} onChange={(e) => setPriceRange(Number(e.target.value))} className="price-slider" />
+            <input
+              type="range"
+              min="0"
+              max={maxPrice}
+              value={priceRange}
+              onChange={(e) => setPriceRange(Number(e.target.value))}
+              className="price-slider"
+            />
           </div>
 
           <div className="filter-group">
             <h4>Rating</h4>
-            {ratingFilters.map((r) => (
-              <label className="filter-checkbox rating-checkbox" key={r.stars}>
-                <input type="checkbox" checked={selectedRating === r.stars} onChange={() => setSelectedRating(selectedRating === r.stars ? null : r.stars)} />
+            {ratingThresholds.map((stars) => (
+              <label className="filter-checkbox rating-checkbox" key={stars}>
+                <input
+                  type="checkbox"
+                  checked={selectedRating === stars}
+                  onChange={() => setSelectedRating(selectedRating === stars ? null : stars)}
+                />
                 <span className="rating-stars">
-                  {renderStars(r.stars)} <span className="rating-label">{r.label}</span>
+                  {renderStars(stars)} <span className="rating-label">& above</span>
                 </span>
-                <span className="filter-count">({r.count})</span>
+                <span className="filter-count">({ratingCounts[stars] || 0})</span>
               </label>
             ))}
           </div>

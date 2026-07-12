@@ -5,7 +5,7 @@ import { v2 as cloudinary } from "cloudinary";
 const addProduct = async (req, res) => {
     try {
 
-        const { name, brand, category, price, mrp, off, description, form, shelfLife, suitableFor, packSizes } = req.body;
+        const { name, brand, category, price, mrp, off, rating, description, form, shelfLife, suitableFor, packSizes } = req.body;
 
         const image1 = req.files.image1 && req.files.image1[0]
         const image2 = req.files.image2 && req.files.image2[0]
@@ -26,7 +26,7 @@ const addProduct = async (req, res) => {
         )
 
         const productData={
-            name, brand, category, price: number(price), mrp: number(mrp), off:number(off), description, form, shelfLife, suitableFor, packSizes: JSON.parse(packSizes),
+            name, brand, category, price: Number(price), mrp: Number(mrp), off:Number(off), rating: Number(rating) || 0, description, form, shelfLife, suitableFor, packSizes: JSON.parse(packSizes),
             image:imagesUrl,
 
         }

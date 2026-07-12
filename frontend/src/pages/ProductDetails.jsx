@@ -1,17 +1,26 @@
-import React, { useState, useContext } from 'react'
+import React, { useState, useContext, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { ProductContext } from '../context/ProductContext'
+import axios from 'axios'
 import {
   Star, StarHalf, ChevronRight, ShoppingCart, Zap, Calendar, Lock, RotateCcw,
-  Droplet, Leaf, BarChart2, ShieldCheck, MessageCircle,   Mail, Link as LinkIcon
+  Droplet, Leaf, BarChart2, ShieldCheck, MessageCircle, Mail, Link as LinkIcon, User
 } from 'lucide-react'
 
-const renderStars = (rating) => {
+const renderStars = (rating, size = 14, interactive = false, onStarClick = null) => {
   const stars = []
   for (let i = 1; i <= 5; i++) {
-    if (rating >= i) stars.push(<Star key={i} size={14} fill="#f5a623" color="#f5a623" />)
-    else if (rating >= i - 0.5) stars.push(<StarHalf key={i} size={14} fill="#f5a623" color="#f5a623" />)
-    else stars.push(<Star key={i} size={14} color="#d0d0d0" />)
+    const filled = rating >= i
+    const half = !filled && rating >= i - 0.5
+    stars.push(
+      filled ? (
+        <Star key={i} size={size} fill="#f5a623" color="#f5a623" style={interactive ? { cursor: 'pointer' } : {}} onClick={interactive ? () => onStarClick(i) : undefined} />
+      ) : half ? (
+        <StarHalf key={i} size={size} fill="#f5a623" color="#f5a623" style={interactive ? { cursor: 'pointer' } : {}} onClick={interactive ? () => onStarClick(i) : undefined} />
+      ) : (
+        <Star key={i} size={size} color="#d0d0d0" style={interactive ? { cursor: 'pointer' } : {}} onClick={interactive ? () => onStarClick(i) : undefined} />
+      )
+    )
   }
   return stars
 }
@@ -26,14 +35,70 @@ const highlights = [
 const ProductDetails = ({ onAddToCart }) => {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { products, loading } = useContext(ProductContext)
+  const { products, loading, getProducts, backendUrl } = useContext(ProductContext)
 
   const [activeThumb, setActiveThumb] = useState(0)
   const [selectedPack, setSelectedPack] = useState(0)
   const [quantity, setQuantity] = useState(1)
   const [activeTab, setActiveTab] = useState('Description')
 
+  const [reviews, setReviews] = useState([])
+  const [reviewsLoaded, setReviewsLoaded] = useState(false)
+  const [reviewName, setReviewName] = useState('')
+  const [reviewRating, setReviewRating] = useState(0)
+  const [reviewComment, setReviewComment] = useState('')
+  const [submittingReview, setSubmittingReview] = useState(false)
+
   const product = products.find((p) => p._id === id)
+
+  const fetchReviews = async () => {
+    try {
+      const res = await axios.get(`${backendUrl}/api/review/${id}`)
+      if (res.data.success) {
+        setReviews(res.data.reviews)
+      }
+      setReviewsLoaded(true)
+    } catch (err) {
+      console.log(err)
+    }
+  }
+
+  useEffect(() => {
+    if (id) fetchReviews()
+  }, [id])
+
+  const handleReviewSubmit = async () => {
+    if (reviewRating === 0) {
+      alert('Please select a star rating')
+      return
+    }
+    if (!reviewComment.trim()) {
+      alert('Please write a comment')
+      return
+    }
+
+    setSubmittingReview(true)
+    try {
+      const res = await axios.post(`${backendUrl}/api/review/add`, {
+        productId: id,
+        name: reviewName,
+        rating: reviewRating,
+        comment: reviewComment,
+      })
+
+      if (res.data.success) {
+        setReviewName('')
+        setReviewRating(0)
+        setReviewComment('')
+        await fetchReviews()
+        await getProducts()
+      }
+    } catch (err) {
+      console.log(err)
+    } finally {
+      setSubmittingReview(false)
+    }
+  }
 
   if (loading) return <div className="product-detail-page"><p>Loading...</p></div>
   if (!product) return <div className="product-detail-page"><p>Product not found.</p></div>
@@ -87,10 +152,68 @@ const ProductDetails = ({ onAddToCart }) => {
       </p>
     ),
     [`Reviews (${product.reviews})`]: (
-      <p>
-        {product.rating} out of 5 based on {product.reviews} verified customer
-        reviews for {product.name}.
-      </p>
+      <div className="reviews-section">
+        <div className="reviews-summary">
+          <span className="reviews-summary-score">{product.rating}</span>
+          <div>
+            <div className="reviews-summary-stars">{renderStars(product.rating, 16)}</div>
+            <p className="reviews-summary-count">Based on {product.reviews} review{product.reviews !== 1 ? 's' : ''}</p>
+          </div>
+        </div>
+
+        <div className="review-form-card">
+          <h4>Write a Review</h4>
+
+          <div className="review-form-row">
+            <label>Your Rating</label>
+            <div className="review-star-picker">
+              {renderStars(reviewRating, 24, true, setReviewRating)}
+            </div>
+          </div>
+
+          <div className="review-form-row">
+            <label>Your Name (optional)</label>
+            <div className="review-name-input">
+              <User size={16} />
+              <input
+                type="text"
+                placeholder="Leave blank to post anonymously"
+                value={reviewName}
+                onChange={(e) => setReviewName(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div className="review-form-row">
+            <label>Your Review</label>
+            <textarea
+              placeholder="Share your experience with this product..."
+              value={reviewComment}
+              onChange={(e) => setReviewComment(e.target.value)}
+              rows={4}
+            />
+          </div>
+
+          <button className="review-submit-btn" onClick={handleReviewSubmit} disabled={submittingReview}>
+            {submittingReview ? 'Posting...' : 'Post Review'}
+          </button>
+        </div>
+
+        <div className="review-list">
+          {!reviewsLoaded && <p>Loading reviews...</p>}
+          {reviewsLoaded && reviews.length === 0 && <p className="no-reviews-msg">No reviews yet. Be the first to review this product!</p>}
+          {reviews.map((r) => (
+            <div className="review-item" key={r._id}>
+              <div className="review-item-header">
+                <span className="review-item-name">{r.name}</span>
+                <span className="review-item-date">{new Date(r.createdAt).toLocaleDateString()}</span>
+              </div>
+              <div className="review-item-stars">{renderStars(r.rating, 13)}</div>
+              <p className="review-item-comment">{r.comment}</p>
+            </div>
+          ))}
+        </div>
+      </div>
     ),
   }
 
@@ -250,8 +373,6 @@ const ProductDetails = ({ onAddToCart }) => {
               <p>Share this product</p>
               <div className="share-icons">
                 <MessageCircle size={18} />
-                {/* <Facebook size={18} /> */}
-                {/* <Twitter size={18} /> */}
                 <Mail size={18} />
                 <LinkIcon size={18} />
               </div>

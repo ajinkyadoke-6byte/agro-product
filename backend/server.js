@@ -9,12 +9,14 @@ import connectDB from './config/mongodb.js'
 import connectCloudinary from "./config/cloudinary.js";
 import userRouter from './routes/userRoute.js';
 import productRouter from './routes/productRoute.js';
+import reviewRouter from "./routes/reviewRoute.js";
 
 const app = express();
 const port = process.env.PORT || 5000;
 connectDB();
 connectCloudinary();
 
+app.use("/api/review", reviewRouter);
 
 // Middlewares
 app.use(express.json());

@@ -23,6 +23,7 @@ const Add = ({token}) => {
   const [price, setPrice] = useState("");
   const [mrp, setMrp] = useState("");
   const [off, setOff] = useState("");
+  const [rating, setRating] = useState("");
 
   const [shelfLife, setShelfLife] = useState("");
   const [suitableFor, setSuitableFor] = useState("");
@@ -46,6 +47,7 @@ const Add = ({token}) => {
       formData.append("price",price)
       formData.append("mrp",mrp)
       formData.append("off",off)
+      formData.append("rating", rating || 0)
       formData.append("shelfLife",shelfLife)
       formData.append("suitableFor",suitableFor)
       formData.append("packSizes", JSON.stringify(packSizes));
@@ -57,28 +59,34 @@ const Add = ({token}) => {
 
       const response = await axios.post(backendUrl + "/api/product/add",formData,{headers:{token}})
 
-      if(response.data.success){
-        toast.success(response.data.message)
-        setName('')
-        setDescription('')
-        setImage1(false)
-        setImage2(false)
-        setImage3(false)
-        setImage4(false)
-        setPrice('')
-        setBrand("");
-        setPrice("");
-        setMrp("");
-        setOff("");
+     if(response.data.success){
+      toast.success(response.data.message)
+      setName('')
+      setDescription('')
+      setImage1(false)
+      setImage2(false)
+      setImage3(false)
+      setImage4(false)
+      setBrand("");
+      setPrice("");
+      setMrp("");
+      setOff("");
+      setRating("");
+      setCategory("");
+      setForm("");
 
-        setPackSizes(["", "", "", ""]);
+      setPackSizes([
+        { size: "", price: "" },
+        { size: "", price: "" },
+        { size: "", price: "" }
+      ]);
 
-        setShelfLife("");
-        setSuitableFor("");
+      setShelfLife("");
+      setSuitableFor("");
 
-      }else{
-        toast.error(response.data.message)
-      }
+    } else {
+      toast.error(response.data.message)
+    }
       console.log(response.data)
     } catch (error){
       console.log(error);
@@ -204,17 +212,22 @@ const Add = ({token}) => {
                 placeholder='₹ 1250'
             />
         </div>
+        <div>
+            <p className="mb-2">Rating (0–5)</p>
+            <input 
+                onChange={(e)=>setRating(e.target.value)} 
+                value={rating} 
+                className="w-full px-3 py-2 sm:w-[120px]" 
+                type='number' 
+                step="0.1"
+                min="0"
+                max="5"
+                placeholder='4.5'
+            />
+        </div>
 
       </div>
 
-      {/* <div>
-        <p>Pack Sizes</p>
-        <div>
-            <div>
-                <p></p>
-            </div>
-        </div>
-      </div> */}
       <div>
         <p className="mb-2">Pack Sizes</p>
 
