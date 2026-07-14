@@ -18,6 +18,8 @@ import HomeCategoryGrid from './components/HomeCategoryGrid'
 import './index.css'
 import React, { useState, useEffect } from 'react'
 import { Routes, Route, useLocation, useNavigate } from 'react-router-dom'
+import { ToastContainer } from 'react-toastify'
+import 'react-toastify/dist/ReactToastify.css'
 
 export const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:5000"
 
