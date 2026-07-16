@@ -1,11 +1,16 @@
-import React, { useState } from 'react'
+import React, { useState, useContext, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { ProductContext } from '../context/ProductContext'
+import axios from 'axios'
+import { toast } from 'react-toastify'
 import logo from '../assets/AgroMartlogo.jpeg'
 import plantImg from '../assets/plantImg.jpeg'
 import { User, Phone, Mail, Lock, Calendar, Users, Eye, EyeOff, Tag, Package, Heart, ShieldCheck } from 'lucide-react'
 
 const Register = () => {
   const navigate = useNavigate()
+  const { token, setToken, backendUrl } = useContext(ProductContext)
+
   const [form, setForm] = useState({
     fullName: '', mobile: '', email: '',
     password: '', confirmPassword: '',
@@ -29,7 +34,7 @@ const Register = () => {
     if (!form.email.trim())           newErrors.email = 'Email address is required'
     else if (!/\S+@\S+\.\S+/.test(form.email)) newErrors.email = 'Enter a valid email address'
     if (!form.password.trim())        newErrors.password = 'Password is required'
-    else if (form.password.length < 6) newErrors.password = 'Password must be at least 6 characters'
+    else if (form.password.length < 8) newErrors.password = 'Password must be at least 8 characters'
     if (!form.confirmPassword.trim()) newErrors.confirmPassword = 'Please confirm your password'
     else if (form.confirmPassword !== form.password) newErrors.confirmPassword = 'Passwords do not match'
     if (!form.dob.trim())             newErrors.dob = 'Date of birth is required'
@@ -38,22 +43,47 @@ const Register = () => {
     return newErrors
   }
 
-  const handleRegister = () => {
+  const handleRegister = async () => {
     const newErrors = validate()
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors)
       return
     }
+
     setLoading(true)
-    setTimeout(() => {
+    try {
+      const response = await axios.post(backendUrl + '/api/user/register', {
+        name: form.fullName,
+        email: form.email,
+        password: form.password,
+        mobile: form.mobile,
+        dob: form.dob,
+        gender: form.gender,
+      })
+
+      if (response.data.success) {
+        setToken(response.data.token)
+        toast.success('Account created successfully')
+      } else {
+        toast.error(response.data.message)
+      }
+    } catch (error) {
+      console.log(error)
+      toast.error(error.response?.data?.message || error.message || 'Registration failed')
+    } finally {
       setLoading(false)
-      navigate('/profile')
-    }, 1000)
+    }
   }
 
   const handleKeyDown = (e) => {
     if (e.key === 'Enter') handleRegister()
   }
+
+  useEffect(() => {
+    if (token) {
+      navigate('/profile')
+    }
+  }, [token, navigate])
 
   return (
     <div className="login-page">
