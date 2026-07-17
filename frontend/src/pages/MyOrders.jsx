@@ -1982,60 +1982,108 @@
 // export default MyOrders
 
 
-
-import React, { useState } from 'react'
-import shineStarImg from '../assets/shineStarImg.jpeg'
-import expludosImg from '../assets/expludosImg.jpeg'
-import silcoatImg from '../assets/silcoatImg.jpeg'
-import kStartImg from '../assets/kStartImg.jpeg'
+import React, { useState, useContext, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
+import axios from 'axios'
+import { toast } from 'react-toastify'
+import { ProductContext } from '../context/ProductContext'
+import {
+  User, ShoppingBag, MapPin, Heart, Star, Truck, CreditCard, Bell, Settings,
+  LogOut, ChevronRight, ChevronLeft, Calendar, Search, RefreshCw, Download,
+  X, ShieldCheck, Lock, RotateCcw
+} from 'lucide-react'
 
 const menuItems = [
-  { icon: 'ti-user', label: 'My Profile', key: 'Profile' },
-  { icon: 'ti-shopping-bag', label: 'My Orders', key: 'MyOrders' },
-  { icon: 'ti-map-pin', label: 'My Addresses', key: 'Profile' },
-  { icon: 'ti-heart', label: 'Wishlist', key: 'Profile' },
-  { icon: 'ti-star', label: 'My Reviews', key: 'Profile' },
-  { icon: 'ti-truck', label: 'Track Order', key: 'Profile' },
-  { icon: 'ti-credit-card', label: 'Payment Methods', key: 'Profile' },
-  { icon: 'ti-bell', label: 'Notification Preferences', key: 'Profile' },
-  { icon: 'ti-settings', label: 'Account Settings', key: 'Profile' },
-]
-
-const orders = [
-  { id: 'ORD12345', items: 3, date: '25 May 2024', time: '10:30 AM', status: 'Delivered', statusNote: 'Delivered on 28 May 2024', total: 1560, payment: 'COD', image: shineStarImg },
-  { id: 'ORD12310', items: 2, date: '18 May 2024', time: '04:15 PM', status: 'Delivered', statusNote: 'Delivered on 20 May 2024', total: 310, payment: 'UPI', image: expludosImg },
-  { id: 'ORD12285', items: 1, date: '10 May 2024', time: '11:20 AM', status: 'Shipped', statusNote: 'Expected Delivery 12 May 2024', total: 180, payment: 'Online', image: silcoatImg },
-  { id: 'ORD12210', items: 4, date: '02 May 2024', time: '09:45 AM', status: 'Processing', statusNote: 'Your order is being processed', total: 2450, payment: 'Razorpay', image: kStartImg },
+  { icon: User,        label: 'My Profile',  path: '/profile' },
+  { icon: ShoppingBag, label: 'My Orders',   path: '/orders'  },
+  { icon: MapPin,      label: 'My Addresses' },
+  { icon: Heart,       label: 'Wishlist' },
+  { icon: Star,        label: 'My Reviews' },
+  { icon: Truck,       label: 'Track Order' },
+  { icon: CreditCard,  label: 'Payment Methods' },
+  { icon: Bell,        label: 'Notification Preferences' },
+  { icon: Settings,    label: 'Account Settings' },
 ]
 
 const statusStyle = (status) => {
-  if (status === 'Delivered') return { background: '#e8f5e9', color: '#1d6b2e' }
-  if (status === 'Shipped') return { background: '#e3f2fd', color: '#0077cc' }
+  if (status === 'Delivered')  return { background: '#e8f5e9', color: '#1d6b2e' }
+  if (status === 'Shipped')    return { background: '#e3f2fd', color: '#0077cc' }
   if (status === 'Processing') return { background: '#fff8e1', color: '#f5a623' }
   return { background: '#fce4ec', color: '#e24b4a' }
 }
 
-const MyOrders = ({ onBack, onNavigate }) => {
-  const [activeMenu, setActiveMenu] = useState('MyOrders')
+const filterOptions = ['All Orders', 'Delivered', 'Shipped', 'Processing', 'Cancelled']
+
+const MyOrders = () => {
+  const navigate = useNavigate()
+  const { token, backendUrl } = useContext(ProductContext)
+
+  const [profileName, setProfileName] = useState('')
+  const [profileEmail, setProfileEmail] = useState('')
+  const [orders, setOrders] = useState([])
+  const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('All Orders')
   const [search, setSearch] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
 
-  const filterOptions = ['All Orders', 'Delivered', 'Shipped', 'Processing', 'Cancelled']
+  const fetchOrders = async () => {
+    try {
+      const response = await axios.post(
+        backendUrl + '/api/order/userorders',
+        {},
+        { headers: { token } }
+      )
+      if (response.data.success) {
+        setOrders(response.data.orders || [])
+      }
+    } catch (error) {
+      // Orders backend may not exist yet — fail silently to an empty list
+      // rather than showing an error toast for a feature still in progress.
+      console.log(error)
+      setOrders([])
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const fetchProfileHeader = async () => {
+    try {
+      const response = await axios.post(
+        backendUrl + '/api/user/profile',
+        {},
+        { headers: { token } }
+      )
+      if (response.data.success) {
+        setProfileName(response.data.user.name || '')
+        setProfileEmail(response.data.user.email || '')
+      }
+    } catch (error) {
+      console.log(error)
+    }
+  }
+
+  useEffect(() => {
+    if (!token) {
+      navigate('/login')
+      return
+    }
+    fetchProfileHeader()
+    fetchOrders()
+  }, [token])
 
   const filteredOrders = orders.filter((o) => {
     const matchesFilter = filter === 'All Orders' || o.status === filter
-    const matchesSearch = o.id.toLowerCase().includes(search.toLowerCase())
+    const matchesSearch = o._id?.toLowerCase().includes(search.toLowerCase())
     return matchesFilter && matchesSearch
   })
 
   return (
     <div className="profile-page">
       <div className="breadcrumb">
-        <span onClick={onBack} style={{ cursor: 'pointer', color: '#1d6b2e' }}>Home</span>
-        <i className="ti ti-chevron-right"></i>
-        <span style={{ color: '#1d6b2e', cursor: 'pointer' }} onClick={() => onNavigate('Profile')}>Account</span>
-        <i className="ti ti-chevron-right"></i>
+        <span onClick={() => navigate('/')} style={{ cursor: 'pointer', color: '#1d6b2e' }}>Home</span>
+        <ChevronRight size={14} />
+        <span style={{ color: '#1d6b2e', cursor: 'pointer' }} onClick={() => navigate('/profile')}>Account</span>
+        <ChevronRight size={14} />
         <span className="breadcrumb-current">My Orders</span>
       </div>
 
@@ -2044,34 +2092,31 @@ const MyOrders = ({ onBack, onNavigate }) => {
         <aside className="profile-sidebar">
           <div className="profile-avatar-block">
             <div className="profile-avatar">
-              <i className="ti ti-user"></i>
+              <User size={28} />
             </div>
             <div>
-              <p className="profile-name">Rohan Kumar</p>
-              <p className="profile-email">rohan.kumar@email.com</p>
-              <span className="premium-badge">
-                <i className="ti ti-crown"></i> Premium Member
-              </span>
+              <p className="profile-name">{profileName || 'Your Name'}</p>
+              <p className="profile-email">{profileEmail}</p>
             </div>
           </div>
 
           <p className="sidebar-section-label">MY ACCOUNT</p>
           <nav className="profile-menu">
-            {menuItems.map((item) => (
-              <div
-                key={item.label}
-                className={`profile-menu-item ${activeMenu === item.key ? 'profile-menu-active' : ''}`}
-                onClick={() => {
-                  setActiveMenu(item.key)
-                  if (onNavigate) onNavigate(item.key)
-                }}
-              >
-                <i className={`ti ${item.icon}`}></i>
-                {item.label}
-              </div>
-            ))}
-            <div className="profile-menu-item profile-logout" onClick={onBack}>
-              <i className="ti ti-logout"></i> Logout
+            {menuItems.map((item) => {
+              const Icon = item.icon
+              return (
+                <div
+                  key={item.label}
+                  className={`profile-menu-item ${item.label === 'My Orders' ? 'profile-menu-active' : ''}`}
+                  onClick={() => item.path && navigate(item.path)}
+                >
+                  <Icon size={17} />
+                  {item.label}
+                </div>
+              )
+            })}
+            <div className="profile-menu-item profile-logout" onClick={() => navigate('/')}>
+              <LogOut size={17} /> Logout
             </div>
           </nav>
         </aside>
@@ -2096,150 +2141,138 @@ const MyOrders = ({ onBack, onNavigate }) => {
                 <div className="orders-search-wrap">
                   <input
                     type="text"
-                    placeholder="Search by order ID, product..."
+                    placeholder="Search by order ID..."
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     className="orders-search-input"
                   />
-                  <i className="ti ti-search orders-search-icon"></i>
+                  <Search size={16} className="orders-search-icon" />
                 </div>
               </div>
             </div>
 
-            <div className="orders-table">
-              <div className="orders-table-head">
-                <span>ORDER DETAILS</span>
-                <span>DATE</span>
-                <span>STATUS</span>
-                <span>TOTAL</span>
-                <span>ACTION</span>
+            {loading ? (
+              <div className="orders-empty">
+                <p>Loading your orders...</p>
               </div>
-
-              {filteredOrders.length === 0 ? (
-                <div className="orders-empty">
-                  <i className="ti ti-shopping-bag"></i>
-                  <p>No orders found</p>
+            ) : (
+              <div className="orders-table">
+                <div className="orders-table-head">
+                  <span>ORDER DETAILS</span>
+                  <span>DATE</span>
+                  <span>STATUS</span>
+                  <span>TOTAL</span>
+                  <span>ACTION</span>
                 </div>
-              ) : (
-                filteredOrders.map((order) => (
-                  <div className="orders-table-row" key={order.id}>
-                    <div className="order-details-cell">
-                      <img src={order.image} alt="product" className="order-product-img" />
-                      <div>
-                        <p className="order-id">Order ID: #{order.id}</p>
-                        <p className="order-items">{order.items} Items</p>
-                        <span className="order-view-details">
-                          View Details <i className="ti ti-chevron-right"></i>
+
+                {filteredOrders.length === 0 ? (
+                  <div className="orders-empty">
+                    <ShoppingBag size={40} color="#c8d5cc" />
+                    <p>You haven't placed any orders yet.</p>
+                    <button className="continue-shopping-btn" onClick={() => navigate('/products')}>
+                      Start Shopping
+                    </button>
+                  </div>
+                ) : (
+                  filteredOrders.map((order) => (
+                    <div className="orders-table-row" key={order._id}>
+                      <div className="order-details-cell">
+                        <img src={order.items?.[0]?.image?.[0]} alt="product" className="order-product-img" />
+                        <div>
+                          <p className="order-id">Order ID: #{order._id}</p>
+                          <p className="order-items">{order.items?.length || 0} Items</p>
+                          <span className="order-view-details">
+                            View Details <ChevronRight size={14} />
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="order-date-cell">
+                        <Calendar size={16} />
+                        <div>
+                          <p className="order-date">{new Date(order.date).toLocaleDateString()}</p>
+                        </div>
+                      </div>
+
+                      <div className="order-status-cell">
+                        <span className="order-status-badge" style={statusStyle(order.status)}>
+                          {order.status}
                         </span>
                       </div>
-                    </div>
 
-                    <div className="order-date-cell">
-                      <i className="ti ti-calendar"></i>
-                      <div>
-                        <p className="order-date">{order.date}</p>
-                        <p className="order-time">{order.time}</p>
+                      <div className="order-total-cell">
+                        <p className="order-total-amount">₹{order.amount?.toLocaleString('en-IN')}</p>
+                        <p className="order-payment">Paid via {order.paymentMethod}</p>
+                      </div>
+
+                      <div className="order-action-cell">
+                        {order.status === 'Delivered' && (
+                          <>
+                            <button className="order-action-btn">
+                              <RefreshCw size={14} /> Order Again
+                            </button>
+                            <span className="order-invoice-link">
+                              <Download size={14} /> View Invoice
+                            </span>
+                          </>
+                        )}
+                        {order.status === 'Shipped' && (
+                          <button className="order-action-btn">
+                            <Truck size={14} /> Track Order
+                          </button>
+                        )}
+                        {order.status === 'Processing' && (
+                          <button className="order-action-btn order-cancel-btn">
+                            <X size={14} /> Cancel Order
+                          </button>
+                        )}
                       </div>
                     </div>
-
-                    <div className="order-status-cell">
-                      <span className="order-status-badge" style={statusStyle(order.status)}>
-                        {order.status}
-                      </span>
-                      <p className="order-status-note">{order.statusNote}</p>
-                    </div>
-
-                    <div className="order-total-cell">
-                      <p className="order-total-amount">₹{order.total.toLocaleString('en-IN')}</p>
-                      <p className="order-payment">Paid via {order.payment}</p>
-                    </div>
-
-                    <div className="order-action-cell">
-                      {order.status === 'Delivered' && (
-                        <>
-                          <button className="order-action-btn">
-                            <i className="ti ti-refresh"></i> Order Again
-                          </button>
-                          <span className="order-invoice-link">
-                            <i className="ti ti-download"></i> View Invoice
-                          </span>
-                        </>
-                      )}
-                      {order.status === 'Shipped' && (
-                        <>
-                          <button className="order-action-btn">
-                            <i className="ti ti-truck"></i> Track Order
-                          </button>
-                          <span className="order-invoice-link">
-                            <i className="ti ti-download"></i> View Invoice
-                          </span>
-                        </>
-                      )}
-                      {order.status === 'Processing' && (
-                        <>
-                          <button className="order-action-btn order-cancel-btn">
-                            <i className="ti ti-x"></i> Cancel Order
-                          </button>
-                          <span className="order-invoice-link">
-                            View Details <i className="ti ti-chevron-right"></i>
-                          </span>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-
-            <div className="orders-footer">
-              <p className="orders-showing">Showing 1 to {filteredOrders.length} of 12 orders</p>
-              <div className="orders-pagination">
-                <button className="page-arrow" onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}>
-                  <i className="ti ti-chevron-left"></i>
-                </button>
-                {[1, 2, 3].map((n) => (
-                  <button
-                    key={n}
-                    className={`page-num ${currentPage === n ? 'page-active' : ''}`}
-                    onClick={() => setCurrentPage(n)}
-                  >{n}</button>
-                ))}
-                <span className="page-dots">...</span>
-                <button className="page-arrow" onClick={() => setCurrentPage((p) => Math.min(3, p + 1))}>
-                  <i className="ti ti-chevron-right"></i>
-                </button>
+                  ))
+                )}
               </div>
-              <div className="orders-rows-per-page">
-                <span>Rows per page:</span>
-                <select><option>10</option><option>20</option></select>
+            )}
+
+            {filteredOrders.length > 0 && (
+              <div className="orders-footer">
+                <p className="orders-showing">Showing 1 to {filteredOrders.length} of {orders.length} orders</p>
+                <div className="orders-pagination">
+                  <button className="page-arrow" onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}>
+                    <ChevronLeft size={16} />
+                  </button>
+                  <button className="page-num page-active">{currentPage}</button>
+                  <button className="page-arrow" onClick={() => setCurrentPage((p) => p + 1)}>
+                    <ChevronRight size={16} />
+                  </button>
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
           <div className="orders-trust-strip">
             <div className="bottom-badge">
-              <i className="ti ti-shield-check"></i>
+              <ShieldCheck size={22} color="#1d6b2e" />
               <div>
                 <p className="bottom-badge-title">100% Genuine Products</p>
                 <p className="bottom-badge-subtitle">Original &amp; Trusted</p>
               </div>
             </div>
             <div className="bottom-badge">
-              <i className="ti ti-truck"></i>
+              <Truck size={22} color="#1d6b2e" />
               <div>
                 <p className="bottom-badge-title">Fast Delivery</p>
                 <p className="bottom-badge-subtitle">On time, every time</p>
               </div>
             </div>
             <div className="bottom-badge">
-              <i className="ti ti-lock"></i>
+              <Lock size={22} color="#1d6b2e" />
               <div>
                 <p className="bottom-badge-title">Secure Payments</p>
                 <p className="bottom-badge-subtitle">Multiple safe payment options</p>
               </div>
             </div>
             <div className="bottom-badge">
-              <i className="ti ti-rotate"></i>
+              <RotateCcw size={22} color="#1d6b2e" />
               <div>
                 <p className="bottom-badge-title">Easy Returns</p>
                 <p className="bottom-badge-subtitle">Hassle free returns</p>

@@ -44,6 +44,7 @@ function App() {
     })
   }
 
+  
   const increaseQty = (id) =>
     setCartItems((prev) => prev.map((i) => (i.product.id === id ? { ...i, quantity: i.quantity + 1 } : i)))
 
