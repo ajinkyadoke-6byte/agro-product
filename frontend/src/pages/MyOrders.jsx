@@ -1980,8 +1980,6 @@
 // }
 
 // export default MyOrders
-
-
 import React, { useState, useContext, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
@@ -1990,7 +1988,7 @@ import { ProductContext } from '../context/ProductContext'
 import {
   User, ShoppingBag, MapPin, Heart, Star, Truck, CreditCard, Bell, Settings,
   LogOut, ChevronRight, ChevronLeft, Calendar, Search, RefreshCw, Download,
-  X, ShieldCheck, Lock, RotateCcw
+  X, ShieldCheck, Lock, RotateCcw, Undo2
 } from 'lucide-react'
 
 const menuItems = [
@@ -2006,10 +2004,13 @@ const menuItems = [
 ]
 
 const statusStyle = (status) => {
-  if (status === 'Delivered')  return { background: '#e8f5e9', color: '#1d6b2e' }
-  if (status === 'Shipped')    return { background: '#e3f2fd', color: '#0077cc' }
-  if (status === 'Processing') return { background: '#fff8e1', color: '#f5a623' }
-  return { background: '#fce4ec', color: '#e24b4a' }
+  if (status === 'Delivered')         return { background: '#e8f5e9', color: '#1d6b2e' }
+  if (status === 'Shipped')           return { background: '#e3f2fd', color: '#0077cc' }
+  if (status === 'Processing')        return { background: '#fff8e1', color: '#f5a623' }
+  if (status === 'Order Placed')      return { background: '#f3f0fc', color: '#7c4dff' }
+  if (status === 'Refund Requested')  return { background: '#fff3e0', color: '#e67e22' }
+  if (status === 'Cancelled')         return { background: '#fce4ec', color: '#e24b4a' }
+  return { background: '#f0f0f0', color: '#666' }
 }
 
 const filterOptions = ['All Orders', 'Delivered', 'Shipped', 'Processing', 'Cancelled']
@@ -2037,8 +2038,6 @@ const MyOrders = () => {
         setOrders(response.data.orders || [])
       }
     } catch (error) {
-      // Orders backend may not exist yet — fail silently to an empty list
-      // rather than showing an error toast for a feature still in progress.
       console.log(error)
       setOrders([])
     } finally {
@@ -2076,6 +2075,50 @@ const MyOrders = () => {
     const matchesSearch = o._id?.toLowerCase().includes(search.toLowerCase())
     return matchesFilter && matchesSearch
   })
+
+  const viewOrderDetails = (order) => {
+    navigate('/order-success', { state: { order } })
+  }
+
+  const handleCancelOrder = async (orderId) => {
+    if (!window.confirm('Are you sure you want to cancel this order?')) return
+    try {
+      const response = await axios.post(
+        backendUrl + '/api/order/cancel',
+        { orderId },
+        { headers: { token } }
+      )
+      if (response.data.success) {
+        toast.success('Order cancelled successfully')
+        fetchOrders()
+      } else {
+        toast.error(response.data.message)
+      }
+    } catch (error) {
+      console.log(error)
+      toast.error(error.response?.data?.message || 'Failed to cancel order')
+    }
+  }
+
+  const handleRequestRefund = async (orderId) => {
+    const reason = window.prompt('Please tell us why you want a refund (optional):') || ''
+    try {
+      const response = await axios.post(
+        backendUrl + '/api/order/refund-request',
+        { orderId, reason },
+        { headers: { token } }
+      )
+      if (response.data.success) {
+        toast.success('Refund request submitted')
+        fetchOrders()
+      } else {
+        toast.error(response.data.message)
+      }
+    } catch (error) {
+      console.log(error)
+      toast.error(error.response?.data?.message || 'Failed to request refund')
+    }
+  }
 
   return (
     <div className="profile-page">
@@ -2177,13 +2220,10 @@ const MyOrders = () => {
                   filteredOrders.map((order) => (
                     <div className="orders-table-row" key={order._id}>
                       <div className="order-details-cell">
-                        <img src={order.items?.[0]?.image?.[0]} alt="product" className="order-product-img" />
+                        <img src={order.items?.[0]?.image} alt="product" className="order-product-img" />
                         <div>
                           <p className="order-id">Order ID: #{order._id}</p>
                           <p className="order-items">{order.items?.length || 0} Items</p>
-                          <span className="order-view-details">
-                            View Details <ChevronRight size={14} />
-                          </span>
                         </div>
                       </div>
 
@@ -2206,26 +2246,63 @@ const MyOrders = () => {
                       </div>
 
                       <div className="order-action-cell">
+                        {order.status === 'Order Placed' && (
+                          <button
+                            className="order-action-btn order-cancel-btn"
+                            onClick={() => handleCancelOrder(order._id)}
+                          >
+                            <X size={14} /> Cancel Order
+                          </button>
+                        )}
+                        {order.status === 'Processing' && (
+                          <button
+                            className="order-action-btn order-cancel-btn"
+                            onClick={() => handleCancelOrder(order._id)}
+                          >
+                            <X size={14} /> Cancel Order
+                          </button>
+                        )}
+                        {order.status === 'Shipped' && (
+                          <>
+                            <button className="order-action-btn">
+                              <Truck size={14} /> Track Order
+                            </button>
+                            <button
+                              className="order-action-btn"
+                              onClick={() => handleRequestRefund(order._id)}
+                            >
+                              <Undo2 size={14} /> Request Refund
+                            </button>
+                          </>
+                        )}
                         {order.status === 'Delivered' && (
                           <>
                             <button className="order-action-btn">
                               <RefreshCw size={14} /> Order Again
+                            </button>
+                            <button
+                              className="order-action-btn"
+                              onClick={() => handleRequestRefund(order._id)}
+                            >
+                              <Undo2 size={14} /> Request Refund
                             </button>
                             <span className="order-invoice-link">
                               <Download size={14} /> View Invoice
                             </span>
                           </>
                         )}
-                        {order.status === 'Shipped' && (
-                          <button className="order-action-btn">
-                            <Truck size={14} /> Track Order
-                          </button>
+                        {order.status === 'Refund Requested' && (
+                          <span className="order-invoice-link" style={{ color: '#e67e22' }}>
+                            Refund in progress
+                          </span>
                         )}
-                        {order.status === 'Processing' && (
-                          <button className="order-action-btn order-cancel-btn">
-                            <X size={14} /> Cancel Order
-                          </button>
-                        )}
+                        <span
+                          className="order-invoice-link"
+                          onClick={() => viewOrderDetails(order)}
+                          style={{ cursor: 'pointer' }}
+                        >
+                          View Details <ChevronRight size={14} />
+                        </span>
                       </div>
                     </div>
                   ))

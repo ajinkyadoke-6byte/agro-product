@@ -935,7 +935,6 @@
 // }
 
 // export default Profile
-
 import React, { useState, useContext, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
@@ -974,6 +973,7 @@ const Profile = () => {
   const [editing, setEditing] = useState(false)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [recentOrders, setRecentOrders] = useState([])
 
   const [form, setForm] = useState({
     fullName: '', mobile: '', email: '',
@@ -1014,12 +1014,29 @@ const Profile = () => {
     }
   }
 
+  const fetchRecentOrders = async () => {
+    try {
+      const response = await axios.post(
+        backendUrl + '/api/order/userorders',
+        {},
+        { headers: { token } }
+      )
+      if (response.data.success) {
+        const sorted = [...response.data.orders].sort((a, b) => b.date - a.date)
+        setRecentOrders(sorted.slice(0, 3))
+      }
+    } catch (error) {
+      console.log(error)
+    }
+  }
+
   useEffect(() => {
     if (!token) {
       navigate('/login')
       return
     }
     fetchProfile()
+    fetchRecentOrders()
   }, [token])
 
   const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value })
@@ -1193,9 +1210,35 @@ const Profile = () => {
                 View All Orders
               </span>
             </div>
-            <p style={{ fontSize: 13, color: '#888', padding: '12px 0' }}>
-              No orders yet.
-            </p>
+
+            {recentOrders.length === 0 ? (
+              <p style={{ fontSize: 13, color: '#888', padding: '12px 0' }}>
+                No orders yet.
+              </p>
+            ) : (
+              <div className="recent-orders-list">
+                {recentOrders.map((order) => (
+                  <div
+                    key={order._id}
+                    className="recent-order-item"
+                    onClick={() => navigate('/order-success', { state: { order } })}
+                  >
+                    <img src={order.items?.[0]?.image} alt="product" className="recent-order-img" />
+                    <div className="recent-order-info">
+                      <p className="recent-order-name">
+                        {order.items?.[0]?.name}
+                        {order.items?.length > 1 ? ` +${order.items.length - 1} more` : ''}
+                      </p>
+                      <p className="recent-order-date">{new Date(order.date).toLocaleDateString()}</p>
+                    </div>
+                    <div className="recent-order-right">
+                      <p className="recent-order-amount">₹{order.amount?.toLocaleString('en-IN')}</p>
+                      <span className="recent-order-status" style={{ color: '#7c4dff' }}>{order.status}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </aside>
 
