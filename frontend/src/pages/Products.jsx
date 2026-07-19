@@ -12,6 +12,7 @@ const categoryList = [
 ]
 
 const ratingThresholds = [4, 3, 2]
+const PRODUCTS_PER_PAGE = 12
 
 const renderStars = (rating) => {
   const stars = []
@@ -31,7 +32,6 @@ const Products = ({ onAddToCart }) => {
   const categoryFromUrl = searchParams.get('category') || 'All Categories'
   const [selectedCategory, setSelectedCategory] = useState(categoryFromUrl)
 
-  // Highest price among all products — used as the slider's starting point
   const maxPrice = useMemo(() => {
     if (!products.length) return 5000
     return Math.max(...products.map((p) => p.price))
@@ -42,7 +42,6 @@ const Products = ({ onAddToCart }) => {
   const [sortBy, setSortBy] = useState('Popularity')
   const [currentPage, setCurrentPage] = useState(1)
 
-  // Once products load, snap the slider to the real max price
   useEffect(() => {
     setPriceRange(maxPrice)
   }, [maxPrice])
@@ -51,7 +50,6 @@ const Products = ({ onAddToCart }) => {
     setSelectedCategory(categoryFromUrl)
   }, [categoryFromUrl])
 
-  // Real category counts computed from actual product data
   const categoryCounts = useMemo(() => {
     const counts = {}
     categoryList.forEach((name) => {
@@ -60,7 +58,6 @@ const Products = ({ onAddToCart }) => {
     return counts
   }, [products])
 
-  // Real rating filter counts computed from actual product data
   const ratingCounts = useMemo(() => {
     const counts = {}
     ratingThresholds.forEach((stars) => {
@@ -102,6 +99,21 @@ const Products = ({ onAddToCart }) => {
     }
     return result
   }, [selectedCategory, priceRange, selectedRating, sortBy, products])
+
+  // Reset to page 1 whenever filters change, so you're not stuck on an empty page
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [selectedCategory, priceRange, selectedRating, sortBy])
+
+  useEffect(() => {
+  window.scrollTo({ top: 0, behavior: 'smooth' })
+}, [currentPage])
+
+  const totalPages = Math.max(1, Math.ceil(displayedProducts.length / PRODUCTS_PER_PAGE))
+  const paginatedProducts = displayedProducts.slice(
+    (currentPage - 1) * PRODUCTS_PER_PAGE,
+    currentPage * PRODUCTS_PER_PAGE
+  )
 
   return (
     <div className="products-page">
@@ -170,7 +182,10 @@ const Products = ({ onAddToCart }) => {
           <div className="products-toolbar">
             <div>
               <h1>{selectedCategory === 'All Categories' ? 'All Products' : selectedCategory}</h1>
-              <p className="products-count">Showing 1–{displayedProducts.length} of {displayedProducts.length} products</p>
+              <p className="products-count">
+                Showing {displayedProducts.length === 0 ? 0 : (currentPage - 1) * PRODUCTS_PER_PAGE + 1}
+                –{Math.min(currentPage * PRODUCTS_PER_PAGE, displayedProducts.length)} of {displayedProducts.length} products
+              </p>
             </div>
             <div className="sort-wrap">
               <label htmlFor="sortBy">Sort by:</label>
@@ -184,53 +199,86 @@ const Products = ({ onAddToCart }) => {
             </div>
           </div>
 
-          <div className="products-grid">
-            {displayedProducts.map((p) => (
-              <div className="product-card" key={p._id} onClick={() => navigate(`/products/${p._id}`)} style={{ cursor: 'pointer' }}>
-                <img src={p.image[0]} alt={p.name} className="product-img" />
-                <p className="product-name">{p.name}</p>
-                <p className="product-brand">{p.brand}</p>
-                <div className="product-price-row">
-                  <span className="product-price">₹{p.price}</span>
-                  <span className="product-mrp">₹{p.mrp}</span>
-                  <span className="product-off">({p.off}% OFF)</span>
+          {displayedProducts.length === 0 ? (
+            <div className="no-products-state">
+              <p>No products match your filters.</p>
+              <span onClick={resetFilters}>Reset Filters</span>
+            </div>
+          ) : (
+            <div className="products-grid">
+              {paginatedProducts.map((p) => (
+                <div className="product-card" key={p._id} onClick={() => navigate(`/products/${p._id}`)} style={{ cursor: 'pointer' }}>
+                  <img src={p.image[0]} alt={p.name} className="product-img" />
+                  <p className="product-name">{p.name}</p>
+                  <p className="product-brand">{p.brand}</p>
+                  <div className="product-price-row">
+                    <span className="product-price">₹{p.price}</span>
+                    <span className="product-mrp">₹{p.mrp}</span>
+                    <span className="product-off">({p.off}% OFF)</span>
+                  </div>
+                  <div className="product-rating">
+                    {renderStars(p.rating)} <span className="rating-count">({p.reviews})</span>
+                  </div>
+                  <button className="add-to-cart-btn" onClick={(e) => { e.stopPropagation(); onAddToCart(p) }}>
+                    <ShoppingCart size={14} /> Add to Cart
+                  </button>
                 </div>
-                <div className="product-rating">
-                  {renderStars(p.rating)} <span className="rating-count">({p.reviews})</span>
-                </div>
-                <button className="add-to-cart-btn" onClick={(e) => { e.stopPropagation(); onAddToCart(p) }}>
-                  <ShoppingCart size={14} /> Add to Cart
-                </button>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
 
-          <div className="pagination">
-            <button className="page-arrow" onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}>
-              <ArrowLeft size={16} />
-            </button>
-            {[1, 2, 3].map((num) => (
-              <button key={num} className={`page-num ${currentPage === num ? 'page-active' : ''}`} onClick={() => setCurrentPage(num)}>{num}</button>
-            ))}
-            <span className="page-dots">...</span>
-            <button className={`page-num ${currentPage === 11 ? 'page-active' : ''}`} onClick={() => setCurrentPage(11)}>11</button>
-            <button className="page-arrow" onClick={() => setCurrentPage((p) => Math.min(11, p + 1))}>
-              <ArrowRight size={16} />
-            </button>
-          </div>
+          {totalPages > 1 && (
+            <div className="pagination">
+              <button
+                className="page-arrow"
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+              >
+                <ArrowLeft size={16} />
+              </button>
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((num) => (
+                <button
+                  key={num}
+                  className={`page-num ${currentPage === num ? 'page-active' : ''}`}
+                  onClick={() => setCurrentPage(num)}
+                >
+                  {num}
+                </button>
+              ))}
+              <button
+                className="page-arrow"
+                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+              >
+                <ArrowRight size={16} />
+              </button>
+            </div>
+          )}
         </main>
       </div>
 
       <div className="products-bottom-strip">
         <div className="bottom-trust-badges">
-          <div className="bottom-badge"><ShieldCheck size={22} color="#1d6b2e" /><div><p className="bottom-badge-title">100% Genuine Products</p><p className="bottom-badge-subtitle">Original &amp; Trusted</p></div></div>
-          <div className="bottom-badge"><Truck size={22} color="#1d6b2e" /><div><p className="bottom-badge-title">Fast Delivery</p><p className="bottom-badge-subtitle">On time, every time</p></div></div>
-          <div className="bottom-badge"><Lock size={22} color="#1d6b2e" /><div><p className="bottom-badge-title">Secure Payments</p><p className="bottom-badge-subtitle">Multiple safe payment options</p></div></div>
-          <div className="bottom-badge"><Headset size={22} color="#1d6b2e" /><div><p className="bottom-badge-title">Expert Support</p><p className="bottom-badge-subtitle">24/7 customer support</p></div></div>
+          <div className="bottom-badge">
+            <div className="bottom-badge-icon"><ShieldCheck size={20} color="#fff" /></div>
+            <div><p className="bottom-badge-title">100% Genuine Products</p><p className="bottom-badge-subtitle">Original &amp; Trusted</p></div>
+          </div>
+          <div className="bottom-badge">
+            <div className="bottom-badge-icon"><Truck size={20} color="#fff" /></div>
+            <div><p className="bottom-badge-title">Fast Delivery</p><p className="bottom-badge-subtitle">On time, every time</p></div>
+          </div>
+          <div className="bottom-badge">
+            <div className="bottom-badge-icon"><Lock size={20} color="#fff" /></div>
+            <div><p className="bottom-badge-title">Secure Payments</p><p className="bottom-badge-subtitle">Multiple safe payment options</p></div>
+          </div>
+          <div className="bottom-badge">
+            <div className="bottom-badge-icon"><Headset size={20} color="#fff" /></div>
+            <div><p className="bottom-badge-title">Expert Support</p><p className="bottom-badge-subtitle">24/7 customer support</p></div>
+          </div>
         </div>
         <div className="bulk-order-banner">
           <div><p className="bulk-title">Bulk Orders?</p><p className="bulk-subtitle">Get special discounts</p></div>
-          <button className="bulk-contact-btn">Contact Us</button>
+          <button className="bulk-contact-btn" onClick={() => navigate('/contact')}>Contact Us</button>
         </div>
       </div>
     </div>

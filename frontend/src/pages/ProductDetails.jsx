@@ -351,7 +351,13 @@ const ProductDetails = ({ onAddToCart }) => {
             <button className="add-to-cart-btn-large" onClick={() => onAddToCart(product, quantity)}>
               <ShoppingCart size={16} /> Add to Cart
             </button>
-            <button className="buy-now-btn">
+            <button
+              className="buy-now-btn"
+              onClick={() => {
+                onAddToCart(product, quantity)
+                navigate('/checkout')
+              }}
+            >
               <Zap size={16} /> Buy Now
             </button>
 
@@ -384,9 +390,25 @@ const ProductDetails = ({ onAddToCart }) => {
             <div className="share-product">
               <p>Share this product</p>
               <div className="share-icons">
-                <MessageCircle size={18} />
-                <Mail size={18} />
-                <LinkIcon size={18} />
+                
+                <a href={`https://wa.me/?text=${encodeURIComponent(`Check out ${product.name} on AgroMart: ${window.location.href}`)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <MessageCircle size={18} />
+                </a>
+                <a href={`mailto:?subject=${encodeURIComponent(product.name)}&body=${encodeURIComponent(`Check this out: ${window.location.href}`)}`}>
+                  <Mail size={18} />
+                </a>
+                <span
+                  style={{ cursor: 'pointer' }}
+                  onClick={() => {
+                    navigator.clipboard.writeText(window.location.href)
+                    alert('Link copied to clipboard!')
+                  }}
+                >
+                  <LinkIcon size={18} />
+                </span>
               </div>
             </div>
           </div>
