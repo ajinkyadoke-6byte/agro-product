@@ -42,6 +42,16 @@ const ProductDetails = ({ onAddToCart }) => {
   const [quantity, setQuantity] = useState(1)
   const [activeTab, setActiveTab] = useState('Description')
 
+  const [isZooming, setIsZooming] = useState(false)
+  const [zoomStyle, setZoomStyle] = useState({})
+
+  const handleMouseMove = (e) => {
+    const { left, top, width, height } = e.currentTarget.getBoundingClientRect()
+    const x = ((e.clientX - left) / width) * 100
+    const y = ((e.clientY - top) / height) * 100
+    setZoomStyle({ transformOrigin: `${x}% ${y}%` })
+  }
+
   const [reviews, setReviews] = useState([])
   const [reviewsLoaded, setReviewsLoaded] = useState(false)
   const [reviewName, setReviewName] = useState('')
@@ -262,9 +272,19 @@ const ProductDetails = ({ onAddToCart }) => {
               ))}
             </div>
           )}
-          <div className="gallery-main">
+          <div
+            className="gallery-main"
+            onMouseEnter={() => setIsZooming(true)}
+            onMouseLeave={() => setIsZooming(false)}
+            onMouseMove={handleMouseMove}
+          >
             {thumbnails.length > 0 ? (
-              <img src={thumbnails[activeThumb]} alt={product.name} />
+              <img
+                src={thumbnails[activeThumb]}
+                alt={product.name}
+                className={isZooming ? 'gallery-main-img-zoomed' : ''}
+                style={isZooming ? zoomStyle : {}}
+              />
             ) : (
               <div className="gallery-no-image">No image available</div>
             )}
