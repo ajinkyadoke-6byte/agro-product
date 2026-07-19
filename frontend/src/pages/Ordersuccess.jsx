@@ -1,49 +1,99 @@
-import React from 'react'
+import React, { useEffect, useState, useContext } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
+import axios from 'axios'
+import { ProductContext } from '../context/ProductContext'
+import {
+  Check, Mail, FileText, Calendar, CreditCard, IndianRupee, MapPin,
+  Phone, Package, Truck
+} from 'lucide-react'
 
 const paymentLabels = {
+  COD: 'Cash on Delivery',
   cod: 'Cash on Delivery',
   upi: 'UPI',
-  card: 'Online Payment',
+  online: 'Online Payment',
   razorpay: 'Razorpay',
 }
 
-const formatOrderDate = (date) => {
+const formatOrderDate = (timestamp) => {
+  const date = new Date(timestamp)
   const options = { day: '2-digit', month: 'short', year: 'numeric' }
   const datePart = date.toLocaleDateString('en-IN', options)
   const timePart = date.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })
   return `${datePart}, ${timePart}`
 }
 
-const formatDeliveryRange = (placedDate) => {
-  const start = new Date(placedDate)
+const formatDeliveryRange = (timestamp) => {
+  const start = new Date(timestamp)
   start.setDate(start.getDate() + 5)
-  const end = new Date(placedDate)
+  const end = new Date(timestamp)
   end.setDate(end.getDate() + 7)
   const opts = { day: '2-digit', month: 'short', year: 'numeric' }
   return `${start.toLocaleDateString('en-IN', opts)} - ${end.toLocaleDateString('en-IN', opts)}`
 }
 
-const OrderSuccess = ({ order, onViewOrder, onContinueShopping }) => {
+const OrderSuccess = () => {
+  const location = useLocation()
+  const navigate = useNavigate()
+  const { token, backendUrl } = useContext(ProductContext)
+
+  const [order, setOrder] = useState(location.state?.order || null)
+  const [loading, setLoading] = useState(!location.state?.order)
+
+  // Fallback: if the page was refreshed and state was lost, fetch the most recent order
+  useEffect(() => {
+    if (order) return
+
+    if (!token) {
+      navigate('/')
+      return
+    }
+
+    const fetchLatestOrder = async () => {
+      try {
+        const response = await axios.post(
+          backendUrl + '/api/order/userorders',
+          {},
+          { headers: { token } }
+        )
+        if (response.data.success && response.data.orders.length > 0) {
+          setOrder(response.data.orders[0])
+        } else {
+          navigate('/')
+        }
+      } catch (error) {
+        console.log(error)
+        navigate('/')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchLatestOrder()
+  }, [order, token])
+
+  if (loading) {
+    return <div className="order-success-page"><p style={{ padding: 40 }}>Loading order details...</p></div>
+  }
+
   if (!order) return null
 
-  const { orderId, placedAt, customer, paymentMethod, items, totalAmount } = order
-
+  const { _id, date, address, paymentMethod, items, amount } = order
   const totalItems = items.reduce((sum, item) => sum + item.quantity, 0)
   const paymentLabel = paymentLabels[paymentMethod] || 'Online Payment'
-  const email = customer.email || `${(customer.fullName || 'customer').split(' ')[0].toLowerCase()}@gmail.com`
+  const email = `${(address.fullName || 'customer').split(' ')[0].toLowerCase()}@gmail.com`
 
   const trackingSteps = [
-    { key: 'confirmed', label: 'Order Confirmed', note: formatOrderDate(placedAt), done: true },
-    { key: 'packed',    label: 'Packed',          note: 'Processing',             done: false },
-    { key: 'shipped',   label: 'Shipped',         note: 'Soon',                   done: false },
-    { key: 'delivered', label: 'Delivered',       note: 'To be delivered',        done: false },
+    { key: 'confirmed', label: 'Order Confirmed', note: formatOrderDate(date), done: true },
+    { key: 'packed',    label: 'Packed',          note: 'Processing',          done: false },
+    { key: 'shipped',   label: 'Shipped',         note: 'Soon',                done: false },
+    { key: 'delivered', label: 'Delivered',       note: 'To be delivered',     done: false },
   ]
 
   return (
     <div className="order-success-page">
       <div className="order-success-layout">
 
-        {/* Left: thank you panel */}
         <div className="order-success-left">
           <div className="order-success-check-wrap">
             <span className="order-success-sparkle sparkle-1">✦</span>
@@ -51,7 +101,7 @@ const OrderSuccess = ({ order, onViewOrder, onContinueShopping }) => {
             <span className="order-success-sparkle sparkle-3">✦</span>
             <span className="order-success-sparkle sparkle-4">✦</span>
             <div className="order-success-check-circle">
-              <i className="ti ti-check"></i>
+              <Check size={28} />
             </div>
           </div>
 
@@ -64,7 +114,7 @@ const OrderSuccess = ({ order, onViewOrder, onContinueShopping }) => {
           </p>
 
           <div className="order-success-email-box">
-            <i className="ti ti-mail"></i>
+            <Mail size={18} />
             <div>
               <p className="order-success-email-label">Order confirmation sent to</p>
               <p className="order-success-email-value">{email}</p>
@@ -72,69 +122,67 @@ const OrderSuccess = ({ order, onViewOrder, onContinueShopping }) => {
           </div>
 
           <div className="order-success-actions">
-            <button className="order-success-view-btn" onClick={onViewOrder}>
+            <button className="order-success-view-btn" onClick={() => navigate('/orders')}>
               View Order Details
             </button>
-            <button className="order-success-continue-btn" onClick={onContinueShopping}>
-              <i className="ti ti-lock"></i> Continue Shopping
+            <button className="order-success-continue-btn" onClick={() => navigate('/products')}>
+              Continue Shopping
             </button>
           </div>
         </div>
 
-        {/* Middle: order details + items */}
         <div className="order-success-middle">
           <div className="order-success-card">
             <div className="order-success-card-header">
-              <i className="ti ti-file-text"></i>
+              <FileText size={18} />
               <h3>Order Details</h3>
-              <span className="order-success-order-id">#{orderId}</span>
+              <span className="order-success-order-id">#{_id}</span>
             </div>
 
             <div className="order-success-detail-row">
-              <span className="order-success-detail-label"><i className="ti ti-calendar"></i> Order Date</span>
-              <span className="order-success-detail-value">{formatOrderDate(placedAt)}</span>
+              <span className="order-success-detail-label"><Calendar size={14} /> Order Date</span>
+              <span className="order-success-detail-value">{formatOrderDate(date)}</span>
             </div>
             <div className="order-success-detail-row">
-              <span className="order-success-detail-label"><i className="ti ti-credit-card"></i> Payment Method</span>
+              <span className="order-success-detail-label"><CreditCard size={14} /> Payment Method</span>
               <span className="order-success-detail-value">{paymentLabel}</span>
             </div>
             <div className="order-success-detail-row">
-              <span className="order-success-detail-label"><i className="ti ti-currency-rupee"></i> Total Amount</span>
+              <span className="order-success-detail-label"><IndianRupee size={14} /> Total Amount</span>
               <span className="order-success-detail-value order-success-total-amount">
-                ₹{totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                ₹{amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
               </span>
             </div>
             <div className="order-success-detail-row">
-              <span className="order-success-detail-label"><i className="ti ti-map-pin"></i> Shipping Address</span>
+              <span className="order-success-detail-label"><MapPin size={14} /> Shipping Address</span>
               <span className="order-success-detail-value order-success-address">
-                {customer.fullName}<br />
-                {customer.address},<br />
-                {customer.village}, {customer.taluka} ({customer.district}),<br />
-                {customer.state} - {customer.pinCode}
+                {address.fullName}<br />
+                {address.address},<br />
+                {address.village}, {address.taluka} ({address.district}),<br />
+                {address.state} - {address.pinCode}
               </span>
             </div>
             <div className="order-success-detail-row">
-              <span className="order-success-detail-label"><i className="ti ti-phone"></i> Phone Number</span>
-              <span className="order-success-detail-value">{customer.mobile}</span>
+              <span className="order-success-detail-label"><Phone size={14} /> Phone Number</span>
+              <span className="order-success-detail-value">{address.mobile}</span>
             </div>
           </div>
 
           <div className="order-success-card">
             <div className="order-success-card-header">
-              <i className="ti ti-package"></i>
+              <Package size={18} />
               <h3>Order Items ({totalItems})</h3>
             </div>
 
-            {items.map((item) => (
-              <div className="order-success-item-row" key={item.product.id}>
-                <img src={item.product.img} alt={item.product.name} className="order-success-item-img" />
+            {items.map((item, i) => (
+              <div className="order-success-item-row" key={i}>
+                <img src={item.image} alt={item.name} className="order-success-item-img" />
                 <div className="order-success-item-info">
-                  <p className="order-success-item-name">{item.product.name}</p>
-                  <p className="order-success-item-size">{item.product.form || 'Liquid'}</p>
+                  <p className="order-success-item-name">{item.name}</p>
                 </div>
                 <div className="order-success-item-right">
                   <p className="order-success-item-price">
-                    ₹{item.product.price.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                    ₹{item.price.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                   </p>
                   <p className="order-success-item-qty">Qty: {item.quantity}</p>
                 </div>
@@ -143,21 +191,20 @@ const OrderSuccess = ({ order, onViewOrder, onContinueShopping }) => {
           </div>
         </div>
 
-        {/* Right: delivery + tracking */}
         <div className="order-success-right">
           <div className="order-success-card order-success-delivery-card">
             <div className="order-success-card-header">
-              <i className="ti ti-truck"></i>
+              <Truck size={18} />
               <h3>Estimated Delivery</h3>
             </div>
-            <p className="order-success-delivery-range">{formatDeliveryRange(placedAt)}</p>
+            <p className="order-success-delivery-range">{formatDeliveryRange(date)}</p>
             <p className="order-success-delivery-type">Standard Delivery</p>
             <p className="order-success-delivery-note">We will notify you once your order is shipped.</p>
           </div>
 
           <div className="order-success-card">
             <div className="order-success-card-header">
-              <i className="ti ti-map-pin"></i>
+              <MapPin size={18} />
               <h3>Order Tracking</h3>
             </div>
 
@@ -166,7 +213,7 @@ const OrderSuccess = ({ order, onViewOrder, onContinueShopping }) => {
                 <div className="order-tracking-step" key={step.key}>
                   <div className="order-tracking-marker-col">
                     <span className={`order-tracking-dot ${step.done ? 'order-tracking-dot-done' : ''}`}>
-                      {step.done && <i className="ti ti-check"></i>}
+                      {step.done && <Check size={12} />}
                     </span>
                     {i < trackingSteps.length - 1 && <span className="order-tracking-line"></span>}
                   </div>
@@ -180,8 +227,8 @@ const OrderSuccess = ({ order, onViewOrder, onContinueShopping }) => {
               ))}
             </div>
 
-            <button className="order-tracking-btn" onClick={onViewOrder}>
-              <i className="ti ti-map-pin"></i> Track Your Order
+            <button className="order-tracking-btn" onClick={() => navigate('/orders')}>
+              <MapPin size={16} /> Track Your Order
             </button>
           </div>
         </div>

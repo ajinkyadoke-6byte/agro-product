@@ -17,16 +17,18 @@ const port = process.env.PORT || 5000;
 connectDB();
 connectCloudinary();
 
-app.use("/api/review", reviewRouter);
-app.use("/api/order", orderRouter);
+
 
 // Middlewares
-app.use(express.json());
+
 app.use(cors());
+app.use(express.json());
 
 // API Endpoint
 app.use('/api/user' ,userRouter);
 app.use('/api/product', productRouter);
+app.use("/api/review", reviewRouter);
+app.use("/api/order", orderRouter);
 app.get("/", (req, res) => {
   res.send("API Working");
 });

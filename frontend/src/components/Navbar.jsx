@@ -12,7 +12,7 @@ const links = [
   { label: 'Contact Us', path: '/contact' },
 ]
 
-const Navbar = ({ cartCount = 0 }) => {
+const Navbar = ({ cartCount = 0, onCartClick }) => {
   const navigate = useNavigate()
   const location = useLocation()
 
@@ -157,22 +157,9 @@ const Navbar = ({ cartCount = 0 }) => {
             <span className="notif-dot"></span>
           </div>
 
-          <div
-            className="icon-wrap"
-            onClick={() => navigate('/cart')}
-            style={{ cursor: 'pointer' }}
-          >
-            <ShoppingCart
-              className="nav-icon"
-              size={24}
-              color="#1F7A3A"
-            />
-
-            {cartCount > 0 && (
-              <span className="cart-badge">
-                {cartCount}
-              </span>
-            )}
+          <div className="icon-wrap" onClick={onCartClick} style={{ cursor: 'pointer' }}>
+            <ShoppingCart className="nav-icon" size={24} color="#1F7A3A" />
+            {cartCount > 0 && <span className="cart-badge">{cartCount}</span>}
           </div>
 
           <div

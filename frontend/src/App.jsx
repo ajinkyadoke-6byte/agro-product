@@ -18,15 +18,18 @@ import HomeCategoryGrid from './components/HomeCategoryGrid'
 import './index.css'
 import React, { useState, useEffect } from 'react'
 import { Routes, Route, useLocation, useNavigate } from 'react-router-dom'
-import { ToastContainer } from 'react-toastify'
+import { toast, ToastContainer } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
+import OrderSuccess from './pages/Ordersuccess'
+import CartDrawer from './components/CartDrawer'
 
 export const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:5000"
 
 function App() {
-  const [cartItems, setCartItems] = useState([])
   const location = useLocation()
   const navigate = useNavigate()
+  const [cartItems, setCartItems] = useState([])
+  const [isCartOpen, setIsCartOpen] = useState(false)
 
   useEffect(() => {
     window.scrollTo(0, 0)
@@ -34,41 +37,44 @@ function App() {
 
   const addToCart = (product, qty = 1) => {
     setCartItems((prev) => {
-      const existing = prev.find((i) => i.product.id === product.id)
+      const existing = prev.find((i) => i.product._id === product._id)
       if (existing) {
         return prev.map((i) =>
-          i.product.id === product.id ? { ...i, quantity: i.quantity + qty } : i
+          i.product._id === product._id ? { ...i, quantity: i.quantity + qty } : i
         )
       }
       return [...prev, { product, quantity: qty }]
     })
+    toast.success('Added to cart successfully')
+    setIsCartOpen(true)
   }
 
-  
   const increaseQty = (id) =>
-    setCartItems((prev) => prev.map((i) => (i.product.id === id ? { ...i, quantity: i.quantity + 1 } : i)))
+    setCartItems((prev) => prev.map((i) => (i.product._id === id ? { ...i, quantity: i.quantity + 1 } : i)))
 
   const decreaseQty = (id) =>
     setCartItems((prev) =>
-      prev.map((i) => (i.product.id === id ? { ...i, quantity: Math.max(1, i.quantity - 1) } : i))
+      prev.map((i) => (i.product._id === id ? { ...i, quantity: Math.max(1, i.quantity - 1) } : i))
     )
 
   const removeFromCart = (id) =>
-    setCartItems((prev) => prev.filter((i) => i.product.id !== id))
+    setCartItems((prev) => prev.filter((i) => i.product._id !== id))
 
-  const handlePlaceOrder = (orderDetails) => {
-    console.log('Order placed:', orderDetails)
+  const handlePlaceOrder = () => {
     setCartItems([])
-    navigate('/')
-    alert('Order placed successfully!')
   }
 
   const isAuthPage = location.pathname === '/login' || location.pathname === '/register'
 
   return (
     <div className="app">
+      <ToastContainer position="top-right" autoClose={2500} />
+
       {!isAuthPage && (
-        <Navbar cartCount={cartItems.reduce((s, i) => s + i.quantity, 0)} />
+        <Navbar
+          cartCount={cartItems.reduce((s, i) => s + i.quantity, 0)}
+          onCartClick={() => setIsCartOpen(true)}
+        />
       )}
 
       <Routes>
@@ -88,7 +94,7 @@ function App() {
           element={<Products onAddToCart={addToCart} />}
         />
 
-       <Route
+        <Route
           path="/products/:id"
           element={<ProductDetails onAddToCart={addToCart} />}
         />
@@ -117,6 +123,8 @@ function App() {
             />
           }
         />
+
+        <Route path="/order-success" element={<OrderSuccess />} />
 
         <Route
           path="/login"
@@ -147,6 +155,14 @@ function App() {
       </Routes>
 
       {!isAuthPage && <Footer />}
+      <CartDrawer
+        isOpen={isCartOpen}
+        onClose={() => setIsCartOpen(false)}
+        cartItems={cartItems}
+        onIncrease={increaseQty}
+        onDecrease={decreaseQty}
+        onRemove={removeFromCart}
+      />
     </div>
   )
 }

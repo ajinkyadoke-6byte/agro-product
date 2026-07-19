@@ -103,16 +103,18 @@ const ProductDetails = ({ onAddToCart }) => {
   if (loading) return <div className="product-detail-page"><p>Loading...</p></div>
   if (!product) return <div className="product-detail-page"><p>Product not found.</p></div>
 
-  const currentPack = product.packSizes[selectedPack]
-  const packPrice = currentPack.price
-  const packMrp = Math.round(currentPack.price / (1 - product.off / 100))
-  const offPercent = product.off
+  const currentPack = product.packSizes?.[selectedPack] || { size: 'N/A', price: 0 }
+  const packPrice = currentPack.price || 0
+  const offPercent = product.off || 0
+  const packMrp = offPercent < 100
+    ? Math.round(packPrice / (1 - offPercent / 100))
+    : packPrice
 
   const specs = [
     { label: 'Brand', value: product.brand },
     { label: 'Category', value: product.category },
     { label: 'Form', value: product.form || 'Liquid' },
-    { label: 'Pack Size', value: product.packSizes.map(p => p.size).join(' / ') },
+    { label: 'Pack Size', value: (product.packSizes || []).map(p => p.size).join(' / ') || 'N/A' },
     { label: 'Shelf Life', value: product.shelfLife || '24 Months' },
     { label: 'Suitable For', value: product.suitableFor || 'All Crops' },
   ]
@@ -147,7 +149,7 @@ const ProductDetails = ({ onAddToCart }) => {
     ),
     Packing: (
       <p>
-        {product.name} is available in {product.packSizes.map(p => p.size).join(', ')} resealable packs
+        {product.name} is available in {(product.packSizes || []).map(p => p.size).join(', ') || 'various'} resealable packs
         to suit both home gardeners and large-scale farmers.
       </p>
     ),
@@ -220,7 +222,7 @@ const ProductDetails = ({ onAddToCart }) => {
   const tabs = ['Description', 'Benefits', 'Usage', 'Dosage', 'Crops', 'Packing', `Reviews (${product.reviews})`]
 
   const images = product.image && product.image.length ? product.image : []
-  const thumbnails = images.length >= 4 ? images.slice(0, 4) : [...images, ...Array(4 - images.length).fill(images[0])]
+  const thumbnails = images.length ? images : []
 
   const relatedProducts = (() => {
     const sameCategory = products.filter(
@@ -247,19 +249,25 @@ const ProductDetails = ({ onAddToCart }) => {
       <div className="product-detail-layout">
 
         <div className="product-gallery">
-          <div className="gallery-thumbs">
-            {thumbnails.map((thumb, i) => (
-              <button
-                key={i}
-                className={`gallery-thumb ${activeThumb === i ? 'gallery-thumb-active' : ''}`}
-                onClick={() => setActiveThumb(i)}
-              >
-                <img src={thumb} alt={`${product.name} view ${i + 1}`} />
-              </button>
-            ))}
-          </div>
+          {thumbnails.length > 1 && (
+            <div className="gallery-thumbs">
+              {thumbnails.map((thumb, i) => (
+                <button
+                  key={i}
+                  className={`gallery-thumb ${activeThumb === i ? 'gallery-thumb-active' : ''}`}
+                  onClick={() => setActiveThumb(i)}
+                >
+                  <img src={thumb} alt={`${product.name} view ${i + 1}`} />
+                </button>
+              ))}
+            </div>
+          )}
           <div className="gallery-main">
-            <img src={thumbnails[activeThumb]} alt={product.name} />
+            {thumbnails.length > 0 ? (
+              <img src={thumbnails[activeThumb]} alt={product.name} />
+            ) : (
+              <div className="gallery-no-image">No image available</div>
+            )}
           </div>
         </div>
 
@@ -317,14 +325,14 @@ const ProductDetails = ({ onAddToCart }) => {
           <div className="purchase-card">
             <h4>Select Pack Size</h4>
             <div className="pack-size-grid">
-              {product.packSizes.map((p, i) => (
+              {(product.packSizes || []).map((p, i) => (
                 <button
-                  key={p.size}
+                  key={p.size || i}
                   className={`pack-size-option ${selectedPack === i ? 'pack-size-active' : ''}`}
                   onClick={() => setSelectedPack(i)}
                 >
-                  <span className="pack-size-name">{p.size}</span>
-                  <span className="pack-size-price">₹{p.price.toLocaleString('en-IN')}</span>
+                  <span className="pack-size-name">{p.size || 'N/A'}</span>
+                  <span className="pack-size-price">₹{(p.price || 0).toLocaleString('en-IN')}</span>
                 </button>
               ))}
             </div>
@@ -335,6 +343,10 @@ const ProductDetails = ({ onAddToCart }) => {
               <span className="qty-value">{quantity}</span>
               <button className="qty-btn" onClick={() => setQuantity((q) => q + 1)}>+</button>
             </div>
+
+            <p className="quantity-total">
+              Total: <strong>₹{(packPrice * quantity).toLocaleString('en-IN')}</strong>
+            </p>
 
             <button className="add-to-cart-btn-large" onClick={() => onAddToCart(product, quantity)}>
               <ShoppingCart size={16} /> Add to Cart

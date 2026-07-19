@@ -22,7 +22,7 @@ const placeOrder = async (req, res) => {
         // Clear the user's cart after a successful order
         await userModel.findByIdAndUpdate(userId, { cartData: {} });
 
-        res.json({ success: true, message: "Order Placed" });
+        res.json({ success: true, message: "Order Placed", order: newOrder });
 
     } catch (error) {
         console.log(error);

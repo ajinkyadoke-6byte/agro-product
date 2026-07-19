@@ -339,15 +339,14 @@
 // }
 
 // export default Checkout
-
-import React, { useState, useContext } from 'react'
-import { useNavigate } from 'react-router-dom'
+import React, { useState, useContext, useEffect } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
 import axios from 'axios'
 import { toast } from 'react-toastify'
 import { ProductContext } from '../context/ProductContext'
 import {
   ChevronRight, Banknote, Smartphone, CreditCard, Zap, ShieldCheck,
-  Truck, Lock, Headset, RotateCcw
+  Truck, Lock, Headset, RotateCcw, Edit
 } from 'lucide-react'
 
 const SHIPPING_FEE = 60
@@ -370,6 +369,7 @@ const paymentMethods = [
 
 const Checkout = ({ cartItems, onEditCart, onPlaceOrder }) => {
   const navigate = useNavigate()
+  const location = useLocation()
   const { token, backendUrl } = useContext(ProductContext)
 
   const [form, setForm] = useState({
@@ -380,6 +380,57 @@ const Checkout = ({ cartItems, onEditCart, onPlaceOrder }) => {
   const [selectedPayment, setSelectedPayment] = useState('cod')
   const [errors, setErrors] = useState({})
   const [placing, setPlacing] = useState(false)
+  const [loadingProfile, setLoadingProfile] = useState(true)
+  const [editing, setEditing] = useState(false)
+  const [hasSavedDetails, setHasSavedDetails] = useState(false)
+
+  // Redirect to login if not authenticated, remembering to come back here
+  useEffect(() => {
+    if (!token) {
+      navigate('/login', { state: { from: '/checkout' } })
+    }
+  }, [token])
+
+  // Pre-fill checkout form from the user's saved profile
+  useEffect(() => {
+    if (!token) return
+
+    const fetchProfile = async () => {
+      try {
+        const response = await axios.post(
+          backendUrl + '/api/user/profile',
+          {},
+          { headers: { token } }
+        )
+
+        if (response.data.success) {
+          const u = response.data.user
+          const prefilled = {
+            fullName: u.name || '',
+            mobile: u.mobile || '',
+            address: u.address?.line || '',
+            village: u.address?.village || '',
+            taluka: u.address?.taluka || '',
+            district: u.address?.district || '',
+            state: u.address?.state || '',
+            pinCode: u.address?.pinCode || '',
+          }
+          setForm(prefilled)
+
+          // If a saved address already exists, lock the form and show Edit
+          const isComplete = prefilled.fullName && prefilled.mobile && prefilled.address && prefilled.pinCode
+          setHasSavedDetails(!!isComplete)
+          setEditing(!isComplete)
+        }
+      } catch (error) {
+        console.log(error)
+      } finally {
+        setLoadingProfile(false)
+      }
+    }
+
+    fetchProfile()
+  }, [token])
 
   const subtotal = cartItems.reduce((sum, item) => sum + item.product.price * item.quantity, 0)
   const totalItems = cartItems.reduce((sum, item) => sum + item.quantity, 0)
@@ -411,12 +462,6 @@ const Checkout = ({ cartItems, onEditCart, onPlaceOrder }) => {
       return
     }
 
-    if (!token) {
-      toast.error('Please login to place an order')
-      navigate('/login')
-      return
-    }
-
     if (selectedPayment !== 'cod') {
       toast.error('This payment method is coming soon. Please select Cash on Delivery for now.')
       return
@@ -445,7 +490,7 @@ const Checkout = ({ cartItems, onEditCart, onPlaceOrder }) => {
       if (response.data.success) {
         toast.success('Order placed successfully!')
         if (onPlaceOrder) onPlaceOrder()
-        navigate('/order-success')
+        navigate('/order-success', { state: { order: response.data.order } })
       } else {
         toast.error(response.data.message)
       }
@@ -455,6 +500,10 @@ const Checkout = ({ cartItems, onEditCart, onPlaceOrder }) => {
     } finally {
       setPlacing(false)
     }
+  }
+
+  if (!token || loadingProfile) {
+    return <div className="checkout-page"><p style={{ padding: 40 }}>Loading checkout...</p></div>
   }
 
   return (
@@ -490,8 +539,18 @@ const Checkout = ({ cartItems, onEditCart, onPlaceOrder }) => {
         <div className="checkout-main">
 
           <div className="checkout-section">
-            <h2 className="checkout-section-title">
-              <span className="section-num">1</span> Customer Details
+            <h2 className="checkout-section-title" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+              <span><span className="section-num">1</span> Customer Details</span>
+              {hasSavedDetails && (
+                <button
+                  type="button"
+                  className="profile-edit-btn"
+                  onClick={() => setEditing(!editing)}
+                  style={{ fontSize: 13 }}
+                >
+                  <Edit size={14} /> {editing ? 'Lock' : 'Edit'}
+                </button>
+              )}
             </h2>
 
             <div className="checkout-form">
@@ -504,6 +563,7 @@ const Checkout = ({ cartItems, onEditCart, onPlaceOrder }) => {
                     placeholder="Enter your full name"
                     value={form.fullName}
                     onChange={handleChange}
+                    disabled={!editing}
                     className={errors.fullName ? 'input-error' : ''}
                   />
                   {errors.fullName && <span className="error-msg">{errors.fullName}</span>}
@@ -516,6 +576,7 @@ const Checkout = ({ cartItems, onEditCart, onPlaceOrder }) => {
                     placeholder="Enter mobile number"
                     value={form.mobile}
                     onChange={handleChange}
+                    disabled={!editing}
                     className={errors.mobile ? 'input-error' : ''}
                   />
                   {errors.mobile && <span className="error-msg">{errors.mobile}</span>}
@@ -530,6 +591,7 @@ const Checkout = ({ cartItems, onEditCart, onPlaceOrder }) => {
                   value={form.address}
                   onChange={handleChange}
                   rows={3}
+                  disabled={!editing}
                   className={errors.address ? 'input-error' : ''}
                 />
                 {errors.address && <span className="error-msg">{errors.address}</span>}
@@ -544,6 +606,7 @@ const Checkout = ({ cartItems, onEditCart, onPlaceOrder }) => {
                     placeholder="Enter village / town"
                     value={form.village}
                     onChange={handleChange}
+                    disabled={!editing}
                     className={errors.village ? 'input-error' : ''}
                   />
                   {errors.village && <span className="error-msg">{errors.village}</span>}
@@ -556,6 +619,7 @@ const Checkout = ({ cartItems, onEditCart, onPlaceOrder }) => {
                     placeholder="Enter taluka"
                     value={form.taluka}
                     onChange={handleChange}
+                    disabled={!editing}
                     className={errors.taluka ? 'input-error' : ''}
                   />
                   {errors.taluka && <span className="error-msg">{errors.taluka}</span>}
@@ -568,6 +632,7 @@ const Checkout = ({ cartItems, onEditCart, onPlaceOrder }) => {
                     placeholder="Enter district"
                     value={form.district}
                     onChange={handleChange}
+                    disabled={!editing}
                     className={errors.district ? 'input-error' : ''}
                   />
                   {errors.district && <span className="error-msg">{errors.district}</span>}
@@ -581,6 +646,7 @@ const Checkout = ({ cartItems, onEditCart, onPlaceOrder }) => {
                     name="state"
                     value={form.state}
                     onChange={handleChange}
+                    disabled={!editing}
                     className={errors.state ? 'input-error' : ''}
                   >
                     <option value="">Select state</option>
@@ -598,6 +664,7 @@ const Checkout = ({ cartItems, onEditCart, onPlaceOrder }) => {
                     placeholder="Enter pin code"
                     value={form.pinCode}
                     onChange={handleChange}
+                    disabled={!editing}
                     className={errors.pinCode ? 'input-error' : ''}
                   />
                   {errors.pinCode && <span className="error-msg">{errors.pinCode}</span>}
@@ -637,28 +704,28 @@ const Checkout = ({ cartItems, onEditCart, onPlaceOrder }) => {
 
           <div className="checkout-trust-strip">
             <div className="bottom-badge">
-              <ShieldCheck size={22} color="#1d6b2e" />
+              <ShieldCheck size={20} color="#fff" />
               <div>
                 <p className="bottom-badge-title">100% Genuine Products</p>
                 <p className="bottom-badge-subtitle">Original &amp; Trusted</p>
               </div>
             </div>
             <div className="bottom-badge">
-              <Truck size={22} color="#1d6b2e" />
+              <Truck size={20} color="#fff" />
               <div>
                 <p className="bottom-badge-title">Fast Delivery</p>
                 <p className="bottom-badge-subtitle">On time, every time</p>
               </div>
             </div>
             <div className="bottom-badge">
-              <Lock size={22} color="#1d6b2e" />
+              <Lock size={20} color="#fff" />
               <div>
                 <p className="bottom-badge-title">Secure Payments</p>
                 <p className="bottom-badge-subtitle">Multiple safe payment options</p>
               </div>
             </div>
             <div className="bottom-badge">
-              <Headset size={22} color="#1d6b2e" />
+              <Headset size={20} color="#fff" />
               <div>
                 <p className="bottom-badge-title">Support 24/7</p>
                 <p className="bottom-badge-subtitle">We are here to help you</p>
@@ -739,11 +806,6 @@ const Checkout = ({ cartItems, onEditCart, onPlaceOrder }) => {
 }
 
 export default Checkout
-
-
-
-
-
 
 // import React, { useState, useEffect } from 'react'
 

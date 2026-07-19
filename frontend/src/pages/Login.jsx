@@ -298,17 +298,18 @@
 
 // export default Login
 import React, { useState, useContext, useEffect } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { ProductContext } from '../context/ProductContext'
-import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
 import { toast } from 'react-toastify'
 import logo from '../assets/AgroMartlogo.jpeg'
 import farmerImg from '../assets/farmerImg.jpeg'
-import { User, Lock, Eye, EyeOff, Package, Heart, ShieldCheck } from 'lucide-react'
+import { User, Lock, Eye, EyeOff, Package, Heart, ShieldCheck, ArrowLeft } from 'lucide-react'
 
 const Login = () => {
   const { token, setToken, backendUrl } = useContext(ProductContext)
   const navigate = useNavigate()
+  const location = useLocation()
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -317,28 +318,11 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
 
-  // On page load, check if a remembered email exists and pre-fill it
-  useEffect(() => {
-    const savedEmail = localStorage.getItem('rememberedEmail')
-    if (savedEmail) {
-      setEmail(savedEmail)
-      setRemember(true)
-    }
-  }, [])
-
   const validate = () => {
     const newErrors = {}
-
-    if (!email.trim()) {
-      newErrors.email = 'Mobile number or email is required'
-    }
-
-    if (!password.trim()) {
-      newErrors.password = 'Password is required'
-    } else if (password.length < 6) {
-      newErrors.password = 'Password must be at least 6 characters'
-    }
-
+    if (!email.trim()) newErrors.email = 'Mobile number or email is required'
+    if (!password.trim()) newErrors.password = 'Password is required'
+    else if (password.length < 6) newErrors.password = 'Password must be at least 6 characters'
     return newErrors
   }
 
@@ -346,42 +330,26 @@ const Login = () => {
     event.preventDefault()
 
     const newErrors = validate()
-
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors)
       return
     }
 
     setLoading(true)
-
     try {
-      const response = await axios.post(
-        backendUrl + '/api/user/login',
-        { email, password }
-      )
+      const response = await axios.post(backendUrl + '/api/user/login', {
+        email,
+        password,
+      })
 
       if (response.data.success) {
-        localStorage.setItem('token', response.data.token)
         setToken(response.data.token)
-
-        // Save or clear the remembered email based on checkbox state
-        if (remember) {
-          localStorage.setItem('rememberedEmail', email)
-        } else {
-          localStorage.removeItem('rememberedEmail')
-        }
-
-        toast.success('Login Successful')
       } else {
         toast.error(response.data.message)
       }
     } catch (error) {
       console.log(error)
-      toast.error(
-        error.response?.data?.message ||
-        error.message ||
-        'Login failed'
-      )
+      toast.error(error.response?.data?.message || error.message)
     } finally {
       setLoading(false)
     }
@@ -389,9 +357,10 @@ const Login = () => {
 
   useEffect(() => {
     if (token) {
-      navigate('/profile')
+      const redirectTo = location.state?.from || '/profile'
+      navigate(redirectTo)
     }
-  }, [token, navigate])
+  }, [token])
 
   return (
     <div className="login-page">
@@ -418,7 +387,7 @@ const Login = () => {
               <div className="login-feature-item">
                 <div className="login-feature-icon"><ShieldCheck size={18} /></div>
                 <div>
-                  <p className="login-feature-title">Secure & Safe</p>
+                  <p className="login-feature-title">Secure &amp; Safe</p>
                   <p className="login-feature-subtitle">Your data is always protected</p>
                 </div>
               </div>
@@ -429,12 +398,22 @@ const Login = () => {
 
       <div className="login-right">
         <form className="login-form-wrap" onSubmit={onSubmitHandler}>
-          <div className="login-logo">
-            <img src={logo} alt="AgroMart" />
-            <div>
-              <p className="login-logo-name">AgroMart</p>
-              <p className="login-logo-tagline">Grow Better, Live Better</p>
+          <div className="login-top-row">
+            <div className="login-logo">
+              <img src={logo} alt="AgroMart" />
+              <div>
+                <p className="login-logo-name">AgroMart</p>
+                <p className="login-logo-tagline">Grow Better, Live Better</p>
+              </div>
             </div>
+
+            <button
+              type="button"
+              className="login-back-btn"
+              onClick={() => navigate('/')}
+            >
+              <ArrowLeft size={16} /> Back to shopping
+            </button>
           </div>
 
           <h1 className="login-title">Login</h1>
@@ -501,9 +480,7 @@ const Login = () => {
 
           <p className="login-register-text">
             Don't have an account?{' '}
-            <span className="login-register-link" onClick={() => navigate('/register')}>
-              Register Now
-            </span>
+            <span className="login-register-link" onClick={() => navigate('/register', { state: location.state })}>Register Now</span>
           </p>
         </form>
       </div>
